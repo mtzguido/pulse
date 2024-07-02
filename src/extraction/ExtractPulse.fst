@@ -26,7 +26,9 @@ let pulse_translate_type_without_decay : translate_type_without_decay_t = fun en
      p = "Pulse.Lib.Reference.ref" ||
      p = "Pulse.Lib.Array.Core.array" ||
      p = "Pulse.Lib.Vec.vec" ||
-     p = "Pulse.Lib.Box.box")
+     p = "Pulse.Lib.Box.box" ||
+     p = "GPU.Ref.gpu_ref"
+    )
     ->
       TBuf (translate_type_without_decay env arg)
 
@@ -70,6 +72,15 @@ let pulse_translate_expr : translate_expr_t = fun env e ->
     when string_of_mlpath p = "Pulse.Lib.Box.alloc" ->
     EBufCreate (ManuallyManaged, translate_expr env init, EConstant (UInt32, "1"))
 
+  | MLE_App ({ expr = MLE_Name p } , [ init ])
+  | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) } , [ init ])
+    when string_of_mlpath p = "GPU.Ref.gpu_alloc0" ->
+    // Not this, because it's not a normal malloc but a cuda_malloc
+    // EBufCreateNoInit (ManuallyManaged, EConstant (UInt32, "1"))
+    let cuda_malloc = EQualified (["C"], "cuda_malloc") in
+    let size = EConstant (UInt32, "8") in // FIXME: should get size for the given type
+    EApp (cuda_malloc, [size])
+
   | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ x; _w ])
     when string_of_mlpath p = "Pulse.Lib.Box.free" ->
     EBufFree (translate_expr env x)
@@ -80,10 +91,19 @@ let pulse_translate_expr : translate_expr_t = fun env e ->
       || string_of_mlpath p = "Pulse.Lib.Box.op_Bang" ->
     EBufRead (translate_expr env e, EQualified (["C"], "_zero_for_deref"))
 
+  | MLE_App({expr=MLE_App({expr=MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ e ])}, [_perm])}, [_v])
+  | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ e; _perm; _v ])
+    when string_of_mlpath p = "GPU.Ref.gpu_read" ->
+    EBufRead (translate_expr env e, EQualified (["C"], "_zero_for_deref"))
+
   | MLE_App ({expr=MLE_App({expr=MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ e1 ])}, [e2])}, [_e3])
   | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ e1; e2; _e3 ])
     when string_of_mlpath p = "Pulse.Lib.Reference.op_Colon_Equals"
       || string_of_mlpath p = "Pulse.Lib.Box.op_Colon_Equals" ->
+    EBufWrite (translate_expr env e1, EQualified (["C"], "_zero_for_deref"), translate_expr env e2)
+
+  | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ e1; e2 ])
+    when string_of_mlpath p = "GPU.Ref.gpu_write" ->
     EBufWrite (translate_expr env e1, EQualified (["C"], "_zero_for_deref"), translate_expr env e2)
 
   (* Pulse arrays *)
