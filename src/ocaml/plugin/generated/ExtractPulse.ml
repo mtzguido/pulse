@@ -43,6 +43,18 @@ let (flatten_app :
     aux [] e
 let (dbg : Prims.bool FStar_Compiler_Effect.ref) =
   FStar_Compiler_Debug.get_toggle "extraction"
+let (head_and_args :
+  FStar_Extraction_ML_Syntax.mlexpr ->
+    (FStar_Extraction_ML_Syntax.mlexpr * FStar_Extraction_ML_Syntax.mlexpr
+      Prims.list))
+  =
+  fun e ->
+    let rec aux acc e1 =
+      match e1.FStar_Extraction_ML_Syntax.expr with
+      | FStar_Extraction_ML_Syntax.MLE_App (head, args) ->
+          aux (FStar_Compiler_List.op_At args acc) head
+      | uu___ -> (e1, acc) in
+    aux [] e
 let (pulse_translate_expr : FStar_Extraction_Krml.translate_expr_t) =
   fun env ->
     fun e ->
@@ -131,44 +143,6 @@ let (pulse_translate_expr : FStar_Extraction_Krml.translate_expr_t) =
                (FStar_Extraction_Krml.EConstant
                   (FStar_Extraction_Krml.UInt32, "1"))) in
            FStar_Extraction_Krml.EBufCreate uu___6
-       | FStar_Extraction_ML_Syntax.MLE_App
-           ({
-              FStar_Extraction_ML_Syntax.expr =
-                FStar_Extraction_ML_Syntax.MLE_Name p;
-              FStar_Extraction_ML_Syntax.mlty = uu___1;
-              FStar_Extraction_ML_Syntax.loc = uu___2;_},
-            init::[])
-           when
-           let uu___3 = FStar_Extraction_ML_Syntax.string_of_mlpath p in
-           uu___3 = "GPU.Ref.gpu_alloc0" ->
-           let cuda_malloc =
-             FStar_Extraction_Krml.EQualified (["C"], "cuda_malloc") in
-           let size =
-             FStar_Extraction_Krml.EConstant
-               (FStar_Extraction_Krml.UInt32, "8") in
-           FStar_Extraction_Krml.EApp (cuda_malloc, [size])
-       | FStar_Extraction_ML_Syntax.MLE_App
-           ({
-              FStar_Extraction_ML_Syntax.expr =
-                FStar_Extraction_ML_Syntax.MLE_TApp
-                ({
-                   FStar_Extraction_ML_Syntax.expr =
-                     FStar_Extraction_ML_Syntax.MLE_Name p;
-                   FStar_Extraction_ML_Syntax.mlty = uu___1;
-                   FStar_Extraction_ML_Syntax.loc = uu___2;_},
-                 uu___3);
-              FStar_Extraction_ML_Syntax.mlty = uu___4;
-              FStar_Extraction_ML_Syntax.loc = uu___5;_},
-            init::[])
-           when
-           let uu___6 = FStar_Extraction_ML_Syntax.string_of_mlpath p in
-           uu___6 = "GPU.Ref.gpu_alloc0" ->
-           let cuda_malloc =
-             FStar_Extraction_Krml.EQualified (["C"], "cuda_malloc") in
-           let size =
-             FStar_Extraction_Krml.EConstant
-               (FStar_Extraction_Krml.UInt32, "8") in
-           FStar_Extraction_Krml.EApp (cuda_malloc, [size])
        | FStar_Extraction_ML_Syntax.MLE_App
            ({
               FStar_Extraction_ML_Syntax.expr =
@@ -590,6 +564,69 @@ let (pulse_translate_expr : FStar_Extraction_Krml.translate_expr_t) =
                  uu___3);
               FStar_Extraction_ML_Syntax.mlty = uu___4;
               FStar_Extraction_ML_Syntax.loc = uu___5;_},
+            b::[])
+           when
+           let uu___6 = FStar_Extraction_ML_Syntax.string_of_mlpath p in
+           uu___6 = "Pulse.Lib.Box.box_to_ref" ->
+           FStar_Extraction_Krml.translate_expr env b
+       | FStar_Extraction_ML_Syntax.MLE_App
+           ({
+              FStar_Extraction_ML_Syntax.expr =
+                FStar_Extraction_ML_Syntax.MLE_Name p;
+              FStar_Extraction_ML_Syntax.mlty = uu___1;
+              FStar_Extraction_ML_Syntax.loc = uu___2;_},
+            _pre::_post::{
+                           FStar_Extraction_ML_Syntax.expr =
+                             FStar_Extraction_ML_Syntax.MLE_Fun
+                             (uu___3, body);
+                           FStar_Extraction_ML_Syntax.mlty = uu___4;
+                           FStar_Extraction_ML_Syntax.loc = uu___5;_}::[])
+           when
+           let uu___6 = FStar_Extraction_ML_Syntax.string_of_mlpath p in
+           uu___6 = "GPU.Base.launch_kernel_1" ->
+           let uu___6 = head_and_args body in
+           (match uu___6 with
+            | (hd, args) ->
+                let kcall =
+                  FStar_Extraction_ML_Syntax.with_ty
+                    FStar_Extraction_ML_Syntax.ml_unit_ty
+                    (FStar_Extraction_ML_Syntax.MLE_Name ([], "PULSE_KCALL")) in
+                let e' =
+                  FStar_Extraction_ML_Syntax.with_ty
+                    FStar_Extraction_ML_Syntax.ml_unit_ty
+                    (FStar_Extraction_ML_Syntax.MLE_App
+                       (kcall,
+                         (FStar_Compiler_List.op_At
+                            [hd;
+                            FStar_Extraction_ML_Syntax.with_ty
+                              FStar_Extraction_ML_Syntax.ml_int_ty
+                              (FStar_Extraction_ML_Syntax.MLE_Const
+                                 (FStar_Extraction_ML_Syntax.MLC_Int
+                                    ("1",
+                                      (FStar_Pervasives_Native.Some
+                                         (FStar_Const.Unsigned,
+                                           FStar_Const.Int32)))));
+                            FStar_Extraction_ML_Syntax.with_ty
+                              FStar_Extraction_ML_Syntax.ml_int_ty
+                              (FStar_Extraction_ML_Syntax.MLE_Const
+                                 (FStar_Extraction_ML_Syntax.MLC_Int
+                                    ("1",
+                                      (FStar_Pervasives_Native.Some
+                                         (FStar_Const.Unsigned,
+                                           FStar_Const.Int32)))))] args))) in
+                FStar_Extraction_Krml.translate_expr env e')
+       | FStar_Extraction_ML_Syntax.MLE_App
+           ({
+              FStar_Extraction_ML_Syntax.expr =
+                FStar_Extraction_ML_Syntax.MLE_TApp
+                ({
+                   FStar_Extraction_ML_Syntax.expr =
+                     FStar_Extraction_ML_Syntax.MLE_Name p;
+                   FStar_Extraction_ML_Syntax.mlty = uu___1;
+                   FStar_Extraction_ML_Syntax.loc = uu___2;_},
+                 uu___3);
+              FStar_Extraction_ML_Syntax.mlty = uu___4;
+              FStar_Extraction_ML_Syntax.loc = uu___5;_},
             _post::body::[])
            when
            let uu___6 = FStar_Extraction_ML_Syntax.string_of_mlpath p in
@@ -598,7 +635,7 @@ let (pulse_translate_expr : FStar_Extraction_Krml.translate_expr_t) =
        | uu___1 ->
            FStar_Compiler_Effect.raise
              FStar_Extraction_Krml.NotSupportedByKrmlExtension)
-let (uu___323 : unit) =
+let (uu___349 : unit) =
   FStar_Extraction_Krml.register_pre_translate_type_without_decay
     pulse_translate_type_without_decay;
   FStar_Extraction_Krml.register_pre_translate_expr pulse_translate_expr
