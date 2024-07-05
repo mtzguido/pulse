@@ -17,6 +17,8 @@ open FStar.BaseTypes
 module BU = FStar.Compiler.Util
 module FC = FStar.Const
 
+open FStar.Class.Show
+
 open FStar.Extraction.Krml
 
 let pulse_translate_type_without_decay : translate_type_without_decay_t = fun env t ->
@@ -55,6 +57,14 @@ let flatten_app e =
 
 let dbg = Debug.get_toggle "extraction"
 
+let head_and_args (e : mlexpr) : mlexpr & list mlexpr =
+  let rec aux acc e =
+    match e.expr with
+    | MLE_App (head, args) -> aux (args @ acc) head
+    | _ -> (e, acc)
+  in
+  aux [] e
+
 let pulse_translate_expr : translate_expr_t = fun env e ->
   let e = flatten_app e in
   if !dbg
@@ -71,15 +81,6 @@ let pulse_translate_expr : translate_expr_t = fun env e ->
   | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) } , [ init ])
     when string_of_mlpath p = "Pulse.Lib.Box.alloc" ->
     EBufCreate (ManuallyManaged, translate_expr env init, EConstant (UInt32, "1"))
-
-  | MLE_App ({ expr = MLE_Name p } , [ init ])
-  | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) } , [ init ])
-    when string_of_mlpath p = "GPU.Ref.gpu_alloc0" ->
-    // Not this, because it's not a normal malloc but a cuda_malloc
-    // EBufCreateNoInit (ManuallyManaged, EConstant (UInt32, "1"))
-    let cuda_malloc = EQualified (["C"], "cuda_malloc") in
-    let size = EConstant (UInt32, "8") in // FIXME: should get size for the given type
-    EApp (cuda_malloc, [size])
 
   | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ x; _w ])
     when string_of_mlpath p = "Pulse.Lib.Box.free" ->
@@ -144,6 +145,34 @@ let pulse_translate_expr : translate_expr_t = fun env e ->
   | MLE_App ({expr=MLE_Name p}, _)
     when (string_of_mlpath p = "Pulse.Lib.Core.new_invariant") ->
     EUnit
+
+  | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ b ])
+    when string_of_mlpath p = "Pulse.Lib.Box.box_to_ref" ->
+    translate_expr env b
+
+  | MLE_App ({ expr = MLE_Name p }, [
+        _pre;
+        _post;
+        { expr = MLE_Fun (_, body) }
+      ])
+    when string_of_mlpath p = "GPU.Base.launch_kernel_1" ->
+    (* Neither of these fully works, since we need an erasure pass. *)
+    if false then
+      let hd, args = head_and_args body in
+      let kcall : expr = EQualified ([], "PULSE_KCALL") in
+      let one   : expr = EConstant (UInt32, "1") in
+      EApp (kcall, [ translate_expr env hd; one; one ] @ List.map (translate_expr env) args)
+    else
+      let hd, args = head_and_args body in
+      let kcall : mlexpr = with_ty ml_unit_ty <| MLE_Name ([], "PULSE_KCALL") in
+      let e' =
+        with_ty ml_unit_ty <|
+          MLE_App (kcall, [ hd;
+                            with_ty ml_int_ty <| MLE_Const (MLC_Int ("1", Some (Unsigned, FStar.Const.Int32)));
+                            with_ty ml_int_ty <| MLE_Const (MLC_Int ("1", Some (Unsigned, FStar.Const.Int32))) ]
+                          @ args)
+      in
+      translate_expr env e'
 
   // FIXME: What should we do with DPE.run_stt? Pulse2Rust has a similar ad-hoc rule
   | MLE_App ({ expr = MLE_TApp({ expr = MLE_Name p }, _) }, [ _post; body ])
