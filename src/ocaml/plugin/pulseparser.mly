@@ -72,6 +72,7 @@ let add_decorations decors ds =
 %token MUT FN INVARIANT WHILE REF PARALLEL REWRITE FOLD EACH
 %token GHOST ATOMIC
 %token WITH_INVS OPENS  SHOW_PROOF_STATE
+%token PRESERVES
 
 %start pulseDeclEOF
 %start peekFnId
@@ -203,7 +204,8 @@ fnBody:
     { Inr (lambda, typ) }
 
 pulseComputationType:
-  | REQUIRES t=pulseSLProp
+  | t0=option(PRESERVES t0=pulseSLProp {t0})
+    REQUIRES t=pulseSLProp
     ret=option(RETURNS i=lidentOrUnderscore COLON r=term { (i, r) })
     ENSURES t2=pulseSLProp
     maybe_opens=option(OPENS inv=appTermNoRecordExp { inv })
@@ -213,7 +215,7 @@ pulseComputationType:
           | Some (i, r) -> i, r
           | None -> default_return
         in
-        PulseSyntaxExtension_Sugar.mk_comp ST t i r t2 maybe_opens (rr $loc)
+        PulseSyntaxExtension_Sugar.mk_comp ST t0 t i r t2 maybe_opens (rr $loc)
     }
 
 

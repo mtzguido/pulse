@@ -45,6 +45,7 @@ type st_comp_tag =
 
 type computation_type = {
      tag: st_comp_tag;
+     preserves : option slprop;
      precondition:slprop;
      return_name:ident;
      return_type:A.term;
@@ -385,6 +386,7 @@ and eq_ascription (a1 a2:either computation_type (option A.term)) =
   | _, _ -> false
 and eq_computation_type (c1 c2:computation_type) =
   c1.tag = c2.tag &&
+  eq_opt eq_slprop c1.preserves c2.preserves &&
   eq_slprop c1.precondition c2.precondition &&
   eq_ident c1.return_name c2.return_name &&
   AU.eq_term c1.return_type c2.return_type &&
@@ -605,9 +607,10 @@ let range_of_decl (d:decl) =
   | FnDefn f -> f.range
   | FnDecl d -> d.range
 (* Convenience builders for use from OCaml/Menhir, since field names get mangled in OCaml *)
-let mk_comp tag precondition return_name return_type postcondition opens range = 
+let mk_comp tag (preserves:option slprop) precondition return_name return_type postcondition opens range =
   {
      tag;
+     preserves;
      precondition;
      return_name;
      return_type;
