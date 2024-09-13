@@ -11,6 +11,9 @@
  (wrapped false)
  (flags (:standard -w -A))
 )
+(env (_
+ (bin_annot false)
+))
 
 (menhir
  (modules pulseparser FStar_Parser_Parse)
