@@ -151,6 +151,10 @@ let free_vars_slprop (env:env_t) (t:Sugar.slprop) =
 let free_vars_comp (env:env_t) (c:Sugar.computation_type)
   : list ident
   = let ids =
+        (match c.preserves with
+         | None -> []
+         | Some p -> free_vars_slprop env p)
+        @
         free_vars_slprop env c.precondition @
         free_vars_term env c.return_type @
         free_vars_slprop (fst (push_bv env c.return_name)) c.postcondition

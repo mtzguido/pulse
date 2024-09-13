@@ -284,6 +284,7 @@ let desugar_computation_type (env:env_t) (c:Sugar.computation_type)
   : err SW.comp
   = //let! pres = map_err (desugar_slprop env) c.preconditions in
     //let pre = fold_right1 (fun a b -> SW.tm_star a b c.range) pres in
+    let! preserves = map_optM (desugar_slprop env) c.preserves in
     let! pre = desugar_slprop env c.precondition in
 
     let! ret = desugar_term env c.return_type in
@@ -307,6 +308,14 @@ let desugar_computation_type (env:env_t) (c:Sugar.computation_type)
     // let post = fold_right1 (fun a b -> SW.tm_star a b c.range) posts in
     let! post = desugar_slprop env1 c.postcondition in
     let post = SW.close_term post bv.index in
+
+    let pre, post =
+      match preserves with
+      | None -> pre, post
+      | Some k ->
+        SW.tm_star k pre R.dummyRange,
+        SW.tm_star k post R.dummyRange
+    in
 
     match c.tag with
     | Sugar.ST ->

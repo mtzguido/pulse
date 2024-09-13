@@ -6,6 +6,15 @@ open Pulse
 assume val foo : int -> slprop
 assume val bar : int -> slprop
 
+fn test (x:int)
+  preserves foo 1
+  requires emp
+  ensures emp
+{
+  assert (foo 1);
+  ();
+}
+
 fn usefoo (x:int)
   requires foo x
   ensures emp
