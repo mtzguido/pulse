@@ -4,6 +4,7 @@
 		"--query_cache",
 		"--ext",
 		"context_pruning",
+		"--ext", "__unrefine",
 		"--z3version",
 		"4.13.3"
 	],
