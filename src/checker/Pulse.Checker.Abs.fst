@@ -144,7 +144,9 @@ let rec rebuild_abs (g:env) (t:st_term) (annot:T.term)
     match t.term, R.inspect_ln annot with
     | Tm_Abs { b; q; ascription=asc; body }, R.Tv_Arrow b' c' -> (
       let b' = T.inspect_binder b' in
-      qualifier_compat g b.binder_ppname.range q b'.qual;
+      let b'qual = b'.qual in
+      // let b'qual = check_qual g b'qual in
+      qualifier_compat g b.binder_ppname.range q b'qual;
       let ty = b'.sort in
       let comp = R.inspect_comp c' in
       match comp with
