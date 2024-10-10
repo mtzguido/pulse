@@ -40,9 +40,12 @@ let option_must :
          fun msg ->
            match f with
            | FStar_Pervasives_Native.Some x ->
-               Obj.magic (FStar_Tactics_Effect.lift_div_tac (fun uu___ -> x))
+               Obj.magic
+                 (Obj.repr
+                    (FStar_Tactics_Effect.lift_div_tac (fun uu___ -> x)))
            | FStar_Pervasives_Native.None ->
-               Obj.magic (FStar_Tactics_V2_Derived.fail msg)) uu___1 uu___
+               Obj.magic (Obj.repr (FStar_Tactics_V2_Derived.fail msg)))
+        uu___1 uu___
 let rec (refl_abs_binders :
   FStar_Reflection_Types.term ->
     Pulse_Syntax_Base.binder Prims.list ->

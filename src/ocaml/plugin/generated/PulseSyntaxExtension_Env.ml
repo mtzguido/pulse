@@ -249,17 +249,23 @@ let (free_vars_comp :
     fun c ->
       let ids =
         let uu___ =
-          free_vars_slprop env c.PulseSyntaxExtension_Sugar.precondition in
+          match c.PulseSyntaxExtension_Sugar.preserves with
+          | FStar_Pervasives_Native.None -> []
+          | FStar_Pervasives_Native.Some p -> free_vars_slprop env p in
         let uu___1 =
           let uu___2 =
-            free_vars_term env c.PulseSyntaxExtension_Sugar.return_type in
+            free_vars_slprop env c.PulseSyntaxExtension_Sugar.precondition in
           let uu___3 =
             let uu___4 =
-              let uu___5 =
-                push_bv env c.PulseSyntaxExtension_Sugar.return_name in
-              FStar_Pervasives_Native.fst uu___5 in
-            free_vars_slprop uu___4
-              c.PulseSyntaxExtension_Sugar.postcondition in
+              free_vars_term env c.PulseSyntaxExtension_Sugar.return_type in
+            let uu___5 =
+              let uu___6 =
+                let uu___7 =
+                  push_bv env c.PulseSyntaxExtension_Sugar.return_name in
+                FStar_Pervasives_Native.fst uu___7 in
+              free_vars_slprop uu___6
+                c.PulseSyntaxExtension_Sugar.postcondition in
+            FStar_List_Tot_Base.op_At uu___4 uu___5 in
           FStar_List_Tot_Base.op_At uu___2 uu___3 in
         FStar_List_Tot_Base.op_At uu___ uu___1 in
       FStar_Class_Ord.dedup FStar_Syntax_Syntax.ord_ident ids

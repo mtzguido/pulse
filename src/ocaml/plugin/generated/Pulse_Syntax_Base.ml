@@ -41,10 +41,15 @@ let (__proj__Mknm__item__nm_ppname : nm -> ppname) =
 type qualifier =
   | Implicit 
   | TcArg 
+  | Meta of FStar_Reflection_Types.term 
 let (uu___is_Implicit : qualifier -> Prims.bool) =
   fun projectee -> match projectee with | Implicit -> true | uu___ -> false
 let (uu___is_TcArg : qualifier -> Prims.bool) =
   fun projectee -> match projectee with | TcArg -> true | uu___ -> false
+let (uu___is_Meta : qualifier -> Prims.bool) =
+  fun projectee -> match projectee with | Meta _0 -> true | uu___ -> false
+let (__proj__Meta__item___0 : qualifier -> FStar_Reflection_Types.term) =
+  fun projectee -> match projectee with | Meta _0 -> _0
 type fv = {
   fv_name: FStar_Reflection_Types.name ;
   fv_range: range }
@@ -651,21 +656,27 @@ let rec eq_list :
         | ([], []) -> true
         | (h1::t1, h2::t2) -> (f h1 h2) && (eq_list f t1 t2)
         | uu___ -> false
-let eq_opt :
+let eq_opt_dec :
   'a .
-    ('a -> 'a -> Prims.bool) ->
+    'a FStar_Pervasives_Native.option ->
       'a FStar_Pervasives_Native.option ->
-        'a FStar_Pervasives_Native.option -> Prims.bool
+        ('a -> 'a -> Prims.bool) -> Prims.bool
   =
-  fun f ->
-    fun l ->
-      fun m ->
+  fun l ->
+    fun m ->
+      fun f ->
         match (l, m) with
         | (FStar_Pervasives_Native.None, FStar_Pervasives_Native.None) ->
             true
         | (FStar_Pervasives_Native.Some l1, FStar_Pervasives_Native.Some m1)
             -> f l1 m1
         | uu___ -> false
+let eq_opt :
+  'a .
+    ('a -> 'a -> Prims.bool) ->
+      'a FStar_Pervasives_Native.option ->
+        'a FStar_Pervasives_Native.option -> Prims.bool
+  = fun f -> fun l -> fun m -> eq_opt_dec l m f
 let (eq_tm_opt :
   term FStar_Pervasives_Native.option ->
     term FStar_Pervasives_Native.option -> Prims.bool)
@@ -751,8 +762,8 @@ let (eq_hint_type : proof_hint_type -> proof_hint_type -> Prims.bool) =
 let (eq_ascription : comp_ascription -> comp_ascription -> Prims.bool) =
   fun a1 ->
     fun a2 ->
-      (eq_opt eq_comp a1.elaborated a2.elaborated) &&
-        (eq_opt eq_comp a1.annotated a2.annotated)
+      (eq_comp_opt a1.elaborated a2.elaborated) &&
+        (eq_comp_opt a1.annotated a2.annotated)
 let rec (eq_st_term : st_term -> st_term -> Prims.bool) =
   fun t1 ->
     fun t2 ->
@@ -760,14 +771,14 @@ let rec (eq_st_term : st_term -> st_term -> Prims.bool) =
       | (Tm_Return { expected_type = ty1; insert_eq = b1; term = t11;_},
          Tm_Return { expected_type = ty2; insert_eq = b2; term = t21;_}) ->
           ((eq_tm ty1 ty2) && (b1 = b2)) && (eq_tm t11 t21)
-      | (Tm_Abs { b = b1; q = o1; ascription = c1; body = t11;_}, Tm_Abs
-         { b = b2; q = o2; ascription = c2; body = t21;_}) ->
-          (((eq_tm b1.binder_ty b2.binder_ty) && (o1 = o2)) &&
-             (eq_ascription c1 c2))
+      | (Tm_Abs { b = b1; q = q1; ascription = c1; body = t11;_}, Tm_Abs
+         { b = b2; q = q2; ascription = c2; body = t21;_}) ->
+          (((eq_tm b1.binder_ty b2.binder_ty) && (eq_opt_dec q1 q2 eq_aqual))
+             && (eq_ascription c1 c2))
             && (eq_st_term t11 t21)
-      | (Tm_STApp { head = h1; arg_qual = o1; arg = t11;_}, Tm_STApp
-         { head = h2; arg_qual = o2; arg = t21;_}) ->
-          ((eq_tm h1 h2) && (o1 = o2)) && (eq_tm t11 t21)
+      | (Tm_STApp { head = h1; arg_qual = q1; arg = t11;_}, Tm_STApp
+         { head = h2; arg_qual = q2; arg = t21;_}) ->
+          ((eq_tm h1 h2) && (eq_opt_dec q1 q2 eq_aqual)) && (eq_tm t11 t21)
       | (Tm_Bind { binder = b1; head1 = t11; body1 = k1;_}, Tm_Bind
          { binder = b2; head1 = t21; body1 = k2;_}) ->
           ((eq_tm b1.binder_ty b2.binder_ty) && (eq_st_term t11 t21)) &&
@@ -859,6 +870,14 @@ and (eq_branch : (pattern * st_term) -> (pattern * st_term) -> Prims.bool) =
           let uu___1 = b2 in
           (match uu___1 with
            | (p2, e2) -> (eq_pattern p1 p2) && (eq_st_term e1 e2))
+and (eq_aqual : qualifier -> qualifier -> Prims.bool) =
+  fun q1 ->
+    fun q2 ->
+      match (q1, q2) with
+      | (Implicit, Implicit) -> true
+      | (TcArg, TcArg) -> true
+      | (Meta t1, Meta t2) -> eq_tm t1 t2
+      | uu___ -> false
 let (comp_res : comp -> term) =
   fun c ->
     match c with
@@ -908,8 +927,8 @@ let (ppname_for_uvar :
           (FStar_Sealed.seal
              (Obj.magic
                 (FStar_Range.mk_range "Pulse.Syntax.Base.fsti"
-                   (Prims.of_int (419)) (Prims.of_int (32))
-                   (Prims.of_int (419)) (Prims.of_int (47)))))
+                   (Prims.of_int (420)) (Prims.of_int (32))
+                   (Prims.of_int (420)) (Prims.of_int (47)))))
           (FStar_Sealed.seal
              (Obj.magic
                 (FStar_Range.mk_range "Prims.fst" (Prims.of_int (611))
@@ -922,13 +941,13 @@ let (ppname_for_uvar :
         (FStar_Sealed.seal
            (Obj.magic
               (FStar_Range.mk_range "Pulse.Syntax.Base.fsti"
-                 (Prims.of_int (419)) (Prims.of_int (25))
-                 (Prims.of_int (419)) (Prims.of_int (48)))))
+                 (Prims.of_int (420)) (Prims.of_int (25))
+                 (Prims.of_int (420)) (Prims.of_int (48)))))
         (FStar_Sealed.seal
            (Obj.magic
               (FStar_Range.mk_range "Pulse.Syntax.Base.fsti"
-                 (Prims.of_int (419)) (Prims.of_int (18))
-                 (Prims.of_int (419)) (Prims.of_int (48)))))
+                 (Prims.of_int (420)) (Prims.of_int (18))
+                 (Prims.of_int (420)) (Prims.of_int (48)))))
         (Obj.magic uu___1)
         (fun uu___2 ->
            FStar_Tactics_Effect.lift_div_tac
@@ -937,12 +956,12 @@ let (ppname_for_uvar :
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "Pulse.Syntax.Base.fsti"
-               (Prims.of_int (419)) (Prims.of_int (18)) (Prims.of_int (419))
+               (Prims.of_int (420)) (Prims.of_int (18)) (Prims.of_int (420))
                (Prims.of_int (48)))))
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "Pulse.Syntax.Base.fsti"
-               (Prims.of_int (419)) (Prims.of_int (4)) (Prims.of_int (419))
+               (Prims.of_int (420)) (Prims.of_int (4)) (Prims.of_int (420))
                (Prims.of_int (49))))) (Obj.magic uu___)
       (fun uu___1 ->
          FStar_Tactics_Effect.lift_div_tac

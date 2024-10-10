@@ -29,15 +29,23 @@ let (rt_recheck :
                        (Prims.of_int (37)) (Prims.of_int (58)))))
               (Obj.magic uu___1)
               (fun uu___2 ->
-                 match uu___2 with
-                 | (FStar_Pervasives_Native.Some tok, uu___3) ->
-                     FStar_Tactics_Effect.lift_div_tac
-                       (fun uu___4 ->
-                          FStar_Reflection_Typing.T_Token
-                            (g, e, (FStar_TypeChecker_Core.E_Total, ty), ()))
-                 | (FStar_Pervasives_Native.None, uu___3) ->
-                     FStar_Tactics_V2_Derived.fail
-                       "Checker.WithInv: rt_recheck failed")
+                 (fun uu___2 ->
+                    match uu___2 with
+                    | (FStar_Pervasives_Native.Some tok, uu___3) ->
+                        Obj.magic
+                          (Obj.repr
+                             (FStar_Tactics_Effect.lift_div_tac
+                                (fun uu___4 ->
+                                   FStar_Reflection_Typing.T_Token
+                                     (g, e,
+                                       (FStar_TypeChecker_Core.E_Total, ty),
+                                       ()))))
+                    | (FStar_Pervasives_Native.None, uu___3) ->
+                        Obj.magic
+                          (Obj.repr
+                             (FStar_Tactics_V2_Derived.fail
+                                "Checker.WithInv: rt_recheck failed")))
+                   uu___2)
 let (recheck :
   Pulse_Typing_Env.env ->
     Pulse_Syntax_Base.term ->

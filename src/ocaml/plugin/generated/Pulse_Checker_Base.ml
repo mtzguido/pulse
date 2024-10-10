@@ -1896,12 +1896,15 @@ let (continuation_elaborator_with_bind_fn :
                                                          post_hint
                                                      then
                                                        Obj.magic
-                                                         (FStar_Tactics_V2_Derived.fail
-                                                            "bind_fn: expects the post_hint to be set")
+                                                         (Obj.repr
+                                                            (FStar_Tactics_V2_Derived.fail
+                                                               "bind_fn: expects the post_hint to be set"))
                                                      else
                                                        Obj.magic
-                                                         (FStar_Tactics_Effect.lift_div_tac
-                                                            (fun uu___4 -> ())) in
+                                                         (Obj.repr
+                                                            (FStar_Tactics_Effect.lift_div_tac
+                                                               (fun uu___4 ->
+                                                                  ()))) in
                                                    FStar_Tactics_Effect.tac_bind
                                                      (FStar_Sealed.seal
                                                         (Obj.magic

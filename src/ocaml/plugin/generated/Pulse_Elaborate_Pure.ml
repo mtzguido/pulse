@@ -25,6 +25,8 @@ let (elab_qual :
              (FStar_Reflection_V2_Data.Tv_FVar
                 (FStar_Reflection_V2_Builtins.pack_fv
                    ["FStar"; "Tactics"; "Typeclasses"; "tcresolve"])))
+    | FStar_Pervasives_Native.Some (Pulse_Syntax_Base.Meta t) ->
+        FStar_Reflection_V2_Data.Q_Meta t
 let (elab_observability :
   Pulse_Syntax_Base.observability -> FStar_Reflection_Types.term) =
   fun uu___ ->

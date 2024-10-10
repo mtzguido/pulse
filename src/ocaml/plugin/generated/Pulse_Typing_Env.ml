@@ -1379,7 +1379,7 @@ let fail_doc_env :
                (Obj.magic
                   (FStar_Range.mk_range "Pulse.Typing.Env.fst"
                      (Prims.of_int (406)) (Prims.of_int (26))
-                     (Prims.of_int (419)) (Prims.of_int (43)))))
+                     (Prims.of_int (419)) (Prims.of_int (44)))))
             (Obj.magic uu___)
             (fun uu___1 ->
                (fun r1 ->
@@ -1557,7 +1557,7 @@ let fail_doc_env :
                           (Obj.magic
                              (FStar_Range.mk_range "Pulse.Typing.Env.fst"
                                 (Prims.of_int (416)) (Prims.of_int (4))
-                                (Prims.of_int (419)) (Prims.of_int (43)))))
+                                (Prims.of_int (419)) (Prims.of_int (44)))))
                        (Obj.magic uu___1)
                        (fun uu___2 ->
                           (fun msg1 ->
@@ -1606,7 +1606,7 @@ let fail_doc_env :
                                            (Prims.of_int (418))
                                            (Prims.of_int (2))
                                            (Prims.of_int (419))
-                                           (Prims.of_int (43)))))
+                                           (Prims.of_int (44)))))
                                   (Obj.magic uu___2)
                                   (fun uu___3 ->
                                      (fun issue ->
@@ -1630,14 +1630,16 @@ let fail_doc_env :
                                                       (Prims.of_int (419))
                                                       (Prims.of_int (2))
                                                       (Prims.of_int (419))
-                                                      (Prims.of_int (43)))))
+                                                      (Prims.of_int (44)))))
                                              (Obj.magic uu___3)
                                              (fun uu___4 ->
-                                                FStar_Tactics_V2_Derived.fail_at
-                                                  "Pulse checker failed"
-                                                  (FStar_Pervasives_Native.Some
-                                                     r1)))) uu___3))) uu___2)))
-                 uu___1)
+                                                (fun uu___4 ->
+                                                   Obj.magic
+                                                     (FStar_Tactics_V2_Derived.fail_at
+                                                        "Pulse checker failed."
+                                                        (FStar_Pervasives_Native.Some
+                                                           r1))) uu___4)))
+                                       uu___3))) uu___2))) uu___1)
 let fail_doc :
   'a .
     env ->

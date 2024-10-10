@@ -103,41 +103,36 @@ let (check :
                                                         FStar_TypeChecker_Core.E_Total
                                                     then
                                                       Obj.magic
-                                                        (Obj.repr
-                                                           (FStar_Tactics_V2_Derived.fail
-                                                              "Impossible: False has effect Ghost"))
+                                                        (FStar_Tactics_V2_Derived.fail
+                                                           "Impossible: False has effect Ghost")
                                                     else
-                                                      Obj.magic
-                                                        (Obj.repr
-                                                           (let uu___5 =
-                                                              Pulse_Checker_Pure.check_prop_validity
-                                                                g ff () in
-                                                            FStar_Tactics_Effect.tac_bind
-                                                              (FStar_Sealed.seal
-                                                                 (Obj.magic
-                                                                    (
-                                                                    FStar_Range.mk_range
+                                                      (let uu___5 =
+                                                         Pulse_Checker_Pure.check_prop_validity
+                                                           g ff () in
+                                                       Obj.magic
+                                                         (FStar_Tactics_Effect.tac_bind
+                                                            (FStar_Sealed.seal
+                                                               (Obj.magic
+                                                                  (FStar_Range.mk_range
                                                                     "Pulse.Checker.Unreachable.fst"
                                                                     (Prims.of_int (46))
                                                                     (Prims.of_int (27))
                                                                     (Prims.of_int (46))
                                                                     (Prims.of_int (80)))))
-                                                              (FStar_Sealed.seal
-                                                                 (Obj.magic
-                                                                    (
-                                                                    FStar_Range.mk_range
+                                                            (FStar_Sealed.seal
+                                                               (Obj.magic
+                                                                  (FStar_Range.mk_range
                                                                     "Pulse.Checker.Unreachable.fst"
                                                                     (Prims.of_int (46))
                                                                     (Prims.of_int (83))
                                                                     (Prims.of_int (50))
                                                                     (Prims.of_int (62)))))
-                                                              (Obj.magic
-                                                                 uu___5)
-                                                              (fun uu___6 ->
-                                                                 (fun
-                                                                    ff_validity
-                                                                    ->
-                                                                    let uu___6
+                                                            (Obj.magic uu___5)
+                                                            (fun uu___6 ->
+                                                               (fun
+                                                                  ff_validity
+                                                                  ->
+                                                                  let uu___6
                                                                     =
                                                                     Obj.magic
                                                                     (FStar_Tactics_Effect.lift_div_tac
@@ -145,8 +140,9 @@ let (check :
                                                                     uu___7 ->
                                                                     Pulse_Typing_Env.fresh
                                                                     g)) in
-                                                                    Obj.magic
-                                                                    (FStar_Tactics_Effect.tac_bind
+                                                                  Obj.magic
+                                                                    (
+                                                                    FStar_Tactics_Effect.tac_bind
                                                                     (FStar_Sealed.seal
                                                                     (Obj.magic
                                                                     (FStar_Range.mk_range
@@ -258,5 +254,5 @@ let (check :
                                                                     uu___10)))
                                                                     uu___8)))
                                                                     uu___7)))
-                                                                   uu___6))))
+                                                                 uu___6))))
                                                uu___3))) uu___2))) uu___1)

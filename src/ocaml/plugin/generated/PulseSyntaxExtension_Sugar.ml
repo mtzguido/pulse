@@ -31,6 +31,7 @@ let (uu___is_STGhost : st_comp_tag -> Prims.bool) =
 type computation_type =
   {
   tag: st_comp_tag ;
+  preserves: slprop FStar_Pervasives_Native.option ;
   precondition: slprop ;
   return_name: FStar_Ident.ident ;
   return_type: FStar_Parser_AST.term ;
@@ -41,43 +42,49 @@ let (__proj__Mkcomputation_type__item__tag : computation_type -> st_comp_tag)
   =
   fun projectee ->
     match projectee with
-    | { tag; precondition; return_name; return_type; postcondition; opens;
-        range;_} -> tag
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> tag
+let (__proj__Mkcomputation_type__item__preserves :
+  computation_type -> slprop FStar_Pervasives_Native.option) =
+  fun projectee ->
+    match projectee with
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> preserves
 let (__proj__Mkcomputation_type__item__precondition :
   computation_type -> slprop) =
   fun projectee ->
     match projectee with
-    | { tag; precondition; return_name; return_type; postcondition; opens;
-        range;_} -> precondition
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> precondition
 let (__proj__Mkcomputation_type__item__return_name :
   computation_type -> FStar_Ident.ident) =
   fun projectee ->
     match projectee with
-    | { tag; precondition; return_name; return_type; postcondition; opens;
-        range;_} -> return_name
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> return_name
 let (__proj__Mkcomputation_type__item__return_type :
   computation_type -> FStar_Parser_AST.term) =
   fun projectee ->
     match projectee with
-    | { tag; precondition; return_name; return_type; postcondition; opens;
-        range;_} -> return_type
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> return_type
 let (__proj__Mkcomputation_type__item__postcondition :
   computation_type -> slprop) =
   fun projectee ->
     match projectee with
-    | { tag; precondition; return_name; return_type; postcondition; opens;
-        range;_} -> postcondition
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> postcondition
 let (__proj__Mkcomputation_type__item__opens :
   computation_type -> FStar_Parser_AST.term FStar_Pervasives_Native.option) =
   fun projectee ->
     match projectee with
-    | { tag; precondition; return_name; return_type; postcondition; opens;
-        range;_} -> opens
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> opens
 let (__proj__Mkcomputation_type__item__range : computation_type -> rng) =
   fun projectee ->
     match projectee with
-    | { tag; precondition; return_name; return_type; postcondition; opens;
-        range;_} -> range
+    | { tag; preserves; precondition; return_name; return_type;
+        postcondition; opens; range;_} -> range
 type mut_or_ref =
   | MUT 
   | REF 
@@ -1108,7 +1115,8 @@ and (eq_computation_type :
   computation_type -> computation_type -> Prims.bool) =
   fun c1 ->
     fun c2 ->
-      (((((c1.tag = c2.tag) && (eq_slprop c1.precondition c2.precondition))
+      ((((((c1.tag = c2.tag) && (eq_opt eq_slprop c1.preserves c2.preserves))
+            && (eq_slprop c1.precondition c2.precondition))
            && (eq_ident c1.return_name c2.return_name))
           && (FStar_Parser_AST_Util.eq_term c1.return_type c2.return_type))
          && (eq_slprop c1.postcondition c2.postcondition))
@@ -1437,29 +1445,32 @@ let (range_of_decl : decl -> rng) =
   fun d -> match d with | FnDefn f -> f.range3 | FnDecl d1 -> d1.range4
 let (mk_comp :
   st_comp_tag ->
-    slprop ->
-      FStar_Ident.ident ->
-        FStar_Parser_AST.term ->
-          slprop ->
-            FStar_Parser_AST.term FStar_Pervasives_Native.option ->
-              rng -> computation_type)
+    slprop FStar_Pervasives_Native.option ->
+      slprop ->
+        FStar_Ident.ident ->
+          FStar_Parser_AST.term ->
+            slprop ->
+              FStar_Parser_AST.term FStar_Pervasives_Native.option ->
+                rng -> computation_type)
   =
   fun tag ->
-    fun precondition ->
-      fun return_name ->
-        fun return_type ->
-          fun postcondition ->
-            fun opens ->
-              fun range ->
-                {
-                  tag;
-                  precondition;
-                  return_name;
-                  return_type;
-                  postcondition;
-                  opens;
-                  range
-                }
+    fun preserves ->
+      fun precondition ->
+        fun return_name ->
+          fun return_type ->
+            fun postcondition ->
+              fun opens ->
+                fun range ->
+                  {
+                    tag;
+                    preserves;
+                    precondition;
+                    return_name;
+                    return_type;
+                    postcondition;
+                    opens;
+                    range
+                  }
 let (add_decorations :
   decl -> FStar_Parser_AST.decoration Prims.list -> decl) =
   fun d ->
