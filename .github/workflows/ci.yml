@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     container: mtzguido/dev-base
     steps:
+      - run: echo "HOME=/home/user" >> $GITHUB_ENV
+      - uses: mtzguido/set-opam-env@master
+
       - uses: actions/checkout@master
         id: checkout-fstar
         with:
