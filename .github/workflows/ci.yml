@@ -32,7 +32,8 @@ jobs:
       - name: Build F* (if not cached)
         if: steps.cache-fstar.outputs.cache-hit != 'true'
         run: |
-          make -C FStar bootstrap ADMIT=1 -skj$(nproc)
+          make -C FStar ADMIT=1 -skj$(nproc) 1
+          make -C FStar ADMIT=1 -skj$(nproc) bootstrap
           echo "FSTAR_HOME=$(pwd)/FStar" >> $GITHUB_ENV
 
       - uses: actions/checkout@master
