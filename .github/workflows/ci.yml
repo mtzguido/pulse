@@ -16,7 +16,7 @@ jobs:
     container: mtzguido/dev-base
     steps:
       - uses: actions/checkout@master
-        name: checkout-fstar
+        id: checkout-fstar
         with:
           path: FStar
           repository: FStarLang/FStar
@@ -36,7 +36,7 @@ jobs:
           echo "FSTAR_HOME=$(pwd)/FStar" >> $GITHUB_ENV
 
       - uses: actions/checkout@master
-        name: checkout-karamel
+        id: checkout-karamel
         with:
           path: karamel
           repository: FStarLang/karamel
