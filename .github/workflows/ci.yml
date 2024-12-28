@@ -64,4 +64,4 @@ jobs:
           path: pulse
 
       - name: Pulse CI
-        run: make -C pulse ci -skj$(nproc)
+        run: . $HOME/.cargo/env && make -C pulse ci -skj$(nproc)
