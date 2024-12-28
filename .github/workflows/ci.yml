@@ -1,0 +1,64 @@
+name: Pulse CI
+on:
+  push:
+    branches-ignore:
+    - _**
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    container: mtzguido/dev-base
+    steps:
+      - uses: actions/checkout@master
+        name: checkout-fstar
+        with:
+          path: FStar
+          repository: FStarLang/FStar
+          ref: master
+
+      - name: Cache F* build
+        id: cache-fstar
+        uses: actions/cache@v4
+        with:
+          path: FStar
+          key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}
+
+      - name: Build F* (if not cached)
+        if: steps.cache-fstar.outputs.cache-hit != 'true'
+        run:
+          make -C FStar bootstrap ADMIT=1 -skj$(nproc)
+          echo "FSTAR_HOME=$(pwd)/FStar" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        name: checkout-karamel
+        with:
+          path: karamel
+          repository: FStarLang/karamel
+          ref: master
+
+      - name: Cache karamel build
+        id: cache-karamel
+        uses: actions/cache@v4
+        with:
+          path: karamel
+          key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-karamel.outputs.commit }}
+
+      - name: Build karamel (if not cached)
+        if: steps.cache-karamel.outputs.cache-hit != 'true'
+        run:
+          make -C karamel -skj$(nproc)
+
+      - run: echo "KRML_HOME=$(pwd)/karamel" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          path: pulse
+
+      - name: Pulse CI
+        run: make -C pulse ci -skj$(nproc)
