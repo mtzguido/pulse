@@ -31,7 +31,7 @@ jobs:
 
       - name: Build F* (if not cached)
         if: steps.cache-fstar.outputs.cache-hit != 'true'
-        run:
+        run: |
           make -C FStar bootstrap ADMIT=1 -skj$(nproc)
           echo "FSTAR_HOME=$(pwd)/FStar" >> $GITHUB_ENV
 
@@ -51,10 +51,9 @@ jobs:
 
       - name: Build karamel (if not cached)
         if: steps.cache-karamel.outputs.cache-hit != 'true'
-        run:
+        run: |
           make -C karamel -skj$(nproc)
-
-      - run: echo "KRML_HOME=$(pwd)/karamel" >> $GITHUB_ENV
+          echo "KRML_HOME=$(pwd)/karamel" >> $GITHUB_ENV
 
       - uses: actions/checkout@master
         with:
