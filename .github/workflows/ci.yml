@@ -37,7 +37,6 @@ jobs:
         run: |
           make -C FStar ADMIT=1 -skj$(nproc) 1
           make -C FStar ADMIT=1 -skj$(nproc) bootstrap
-          echo "FSTAR_HOME=$(pwd)/FStar" >> $GITHUB_ENV
 
       - name: Save built F*
         if: steps.cache-fstar.outputs.cache-hit != 'true'
@@ -45,6 +44,8 @@ jobs:
         with:
           path: FStar
           key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}
+
+      - run: echo "FSTAR_HOME=$(pwd)/FStar" >> $GITHUB_ENV
 
       - uses: actions/checkout@master
         id: checkout-karamel
@@ -64,7 +65,6 @@ jobs:
         if: steps.cache-karamel.outputs.cache-hit != 'true'
         run: |
           make -C karamel -skj$(nproc)
-          echo "KRML_HOME=$(pwd)/karamel" >> $GITHUB_ENV
 
       - name: Save built karamel
         if: steps.cache-karamel.outputs.cache-hit != 'true'
@@ -72,6 +72,8 @@ jobs:
         with:
           path: karamel
           key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-karamel.outputs.commit }}
+
+      - run: echo "KRML_HOME=$(pwd)/karamel" >> $GITHUB_ENV
 
       - uses: actions/checkout@master
         with:
