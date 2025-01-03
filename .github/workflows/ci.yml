@@ -87,7 +87,7 @@ jobs:
         run: . $HOME/.cargo/env && false && make -C pulse -skj$(nproc) ADMIT=1
 
       - name: Post result to Zulip
-        if: ${{ always () && secrets.ZULIP_API_KEY != '' }}
+        if: ${{ always () }} # && secrets.ZULIP_API_KEY != '' }}
         continue-on-error: true
         uses: zulip/github-actions-zulip/send-message@v1
         with:
