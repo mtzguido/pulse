@@ -100,5 +100,5 @@ jobs:
           content: |
             ${{ github.event.head_commit.message || github.event.pull_request.title || github.head_commit.message }} by ${{ github.event.head_commit.author.username || github.event.pull_request.user.login || github.head_commit.author.username }}
             Commit: [${{github.sha}}](${{ github.event.head_commit.url || github.even.pull_request.html_url}})
-            Status: ${{ if steps.cistep.outcome == 'success' then '✅' else if steps.cistep.outcome == 'cancelled' then '⚠' else '❌' }}
+            Status: ${{ steps.cistep.outcome == 'success' && '✅' || steps.cistep.outcome == 'cancelled' && '⚠' || '❌' }}
             [Link to run](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}})
