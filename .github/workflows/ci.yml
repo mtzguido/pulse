@@ -98,7 +98,7 @@ jobs:
         uses: zulip/github-actions-zulip/send-message@v1
         with:
           api-key: ${{ secrets.ZULIP_API_KEY }}
-          email: "mtzguido@gmail.com"
+          email: "github-commits-bot@fstar.zulipchat.com"
           organization-url: "https://fstar.zulipchat.com"
           to: "test-actions"
           type: "stream"
