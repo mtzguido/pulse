@@ -83,4 +83,22 @@ jobs:
           path: pulse
 
       - name: Pulse CI
-        run: . $HOME/.cargo/env && make -C pulse ci -skj$(nproc)
+        id: cistep
+        run: . $HOME/.cargo/env && false && make -C pulse -skj$(nproc) ADMIT=1
+
+      - name: Post result to Zulip
+        if: ${{ always () && secrets.ZULIP_API_KEY != '' }}
+        continue-on-error: true
+        uses: zulip/github-actions-zulip/send-message@v1
+        with:
+          api-key: ${{ secrets.ZULIP_API_KEY }}
+          email: "mtzguido@gmail.com"
+          organization-url: "https://fstar.zulipchat.com"
+          to: "test-actions"
+          type: "stream"
+          topic: ci-${{github.ref_name}}
+          content: |
+            ${{ github.event.head_commit.message || github.event.pull_request.title || github.head_commit.message }} by ${{ github.event.head_commit.author.username || github.event.pull_request.user.login || github.head_commit.author.username }}
+            Commit: [${{github.sha}}](${{ github.event.head_commit.url || github.even.pull_request.html_url}})
+            Status: ${{ if steps.cistep.outcome == 'success' then '✅' else if steps.cistep.outcome == 'cancelled' then '⚠' else '❌' }}
+            [Link to run](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}})
