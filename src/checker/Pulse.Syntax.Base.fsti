@@ -70,12 +70,6 @@ type nm = {
 }
 
 noeq
-type qualifier =
-  | Implicit
-  | TcArg
-  | Meta of R.term
-
-noeq
 type fv = {
   fv_name : R.name;
   fv_range : range;
@@ -83,15 +77,9 @@ type fv = {
 let as_fv l = { fv_name = l; fv_range = FStar.Range.range_0 }
 
 type term = R.term
+type binder = R.binder
 type slprop = term
 type typ = term
-
-noeq
-type binder = {
-  binder_ty     : term;
-  binder_ppname : ppname;
-  binder_attrs  : FStar.Sealed.Inhabited.sealed #(list term) []
-}
 
 noeq
 type st_comp = { (* ST pre (x:res) post ... x is free in post *)
@@ -207,13 +195,12 @@ type st_term' =
     }
   | Tm_Abs {
       b:binder;
-      q:option qualifier;
       ascription: comp_ascription;
       body:st_term;
     }
   | Tm_STApp {
       head:term;
-      arg_qual:option qualifier;
+      arg_qual:option R.aqualv; (* Can only be Q_Implicit or Q_Explicit *)
       arg:term;
     }
   | Tm_Bind { 
@@ -326,7 +313,7 @@ type fn_defn = {
   Tm_Abs with bs and body, especially if non-recursive. *)
   id : R.ident;
   isrec : bool;
-  bs : list (option qualifier & binder & bv);
+  bs : list (binder & bv);
   comp : comp; (* bs in scope *)
   meas : (meas:option term{Some? meas ==> isrec}); (* bs in scope *)
   body : st_term; (* bs in scope *)
@@ -336,7 +323,7 @@ noeq
 type fn_decl = {
   (* A function declaration, without a body. *)
   id : R.ident;
-  bs : list (option qualifier & binder & bv);
+  bs : list (binder & bv);
   comp : comp_st; (* bs in scope *)
 }
 
@@ -349,20 +336,6 @@ and decl = {
   d : decl';
   range : range;
 }
-
-let mk_binder_with_attrs (binder_ty:term) (binder_ppname:ppname) binder_attrs : binder =
-  {binder_ty;binder_ppname;binder_attrs}
-
-let binder_attrs_default = FStar.Sealed.seal []
-
-let null_binder (t:term) : binder =
-  mk_binder_with_attrs t ppname_default binder_attrs_default
-
-let mk_binder (s:string) (r:range) (t:term) : binder =
-  mk_binder_with_attrs t (mk_ppname (RT.seal_pp_name s) r) binder_attrs_default
-
-let mk_binder_ppname (binder_ty:term) (binder_ppname:ppname) : binder =
-  mk_binder_with_attrs binder_ty binder_ppname binder_attrs_default
 
 val eq_univ (u1 u2:universe)
   : b:bool { b <==> (u1 == u2) }
@@ -425,7 +398,13 @@ let comp_inames (c:comp { C_STAtomic? c || C_STGhost? c }) : term =
 
 let nvar = ppname & var 
 let v_as_nv x : nvar = ppname_default, x
-let as_binder (t:term) = null_binder t
+let as_binder (t:term) =
+  R.pack_binder {
+    sort = t;
+    qual = R.Q_Explicit;
+    attrs = [];
+    ppname = Sealed.seal "_";
+  }
 
 let ppname_for_uvar (p : ppname) : T.Tac ppname =
   {

@@ -103,9 +103,6 @@ let rec eq_list_dec top1 top2
       eq_list_dec top1 top2 f t1 t2
     | _ -> false
 
-let eq_binder (b0 b1:binder) : b:bool { b <==> (b0 == b1) } =
-  eq_tm b0.binder_ty b1.binder_ty
-
 let eq_tm_list (t1 t2:list term) = eq_list eq_tm t1 t2
 
 // wire to Reflection.TermEq
@@ -170,17 +167,18 @@ let eq_ascription (a1 a2:comp_ascription)
 
 let rec eq_st_term (t1 t2:st_term) 
   : b:bool { b <==> (t1 == t2) }
-  = match t1.term, t2.term with
+  = let top1 = t1 in
+    let top2 = t2 in
+    match t1.term, t2.term with
     | Tm_Return {expected_type=ty1; insert_eq=b1; term=t1}, 
       Tm_Return {expected_type=ty2; insert_eq=b2; term=t2} ->
       eq_tm ty1 ty2 &&
       b1 = b2 &&
       eq_tm t1 t2
 
-    | Tm_Abs { b=b1; q=q1; ascription=c1; body=t1 },
-      Tm_Abs { b=b2; q=q2; ascription=c2; body=t2 } ->
-      eq_tm b1.binder_ty b2.binder_ty &&
-      eq_opt_dec q1 q2 eq_aqual &&
+    | Tm_Abs { b=b1; ascription=c1; body=t1 },
+      Tm_Abs { b=b2; ascription=c2; body=t2 } ->
+      eq_binder b1 b2 &&
       eq_ascription c1 c2 &&
       eq_st_term t1 t2
   
@@ -192,13 +190,13 @@ let rec eq_st_term (t1 t2:st_term)
 
     | Tm_Bind { binder=b1; head=t1; body=k1 },
       Tm_Bind { binder=b2; head=t2; body=k2 } ->
-      eq_tm b1.binder_ty b2.binder_ty &&
+      eq_binder b1 b2 &&
       eq_st_term t1 t2 &&
       eq_st_term k1 k2
 
     | Tm_TotBind { binder=b1; head=t1; body=k1 },
       Tm_TotBind { binder=b2; head=t2; body=k2 } ->
-      eq_tm b1.binder_ty b2.binder_ty &&
+      eq_binder b1 b2 &&
       eq_tm t1 t2 &&
       eq_st_term k1 k2
       
@@ -244,13 +242,13 @@ let rec eq_st_term (t1 t2:st_term)
 
     | Tm_WithLocal { binder=x1; initializer=e1; body=b1 },
       Tm_WithLocal { binder=x2; initializer=e2; body=b2 } ->
-      eq_tm x1.binder_ty x2.binder_ty &&
+      eq_binder x1 x2 &&
       eq_tm e1 e2 &&
       eq_st_term b1 b2
 
     | Tm_WithLocalArray { binder=x1; initializer=e1; length=n1; body=b1 },
       Tm_WithLocalArray { binder=x2; initializer=e2; length=n2; body=b2 } ->
-      eq_tm x1.binder_ty x2.binder_ty &&
+      eq_binder x1 x2 &&
       eq_tm e1 e2 &&
       eq_tm n1 n2 &&
       eq_st_term b1 b2
@@ -275,16 +273,16 @@ let rec eq_st_term (t1 t2:st_term)
     | Tm_ProofHintWithBinders { hint_type=ht1; binders=bs1; t=t1 },
       Tm_ProofHintWithBinders { hint_type=ht2; binders=bs2; t=t2 } ->
       eq_hint_type ht1 ht2 &&
-      eq_list eq_binder bs1 bs2 &&
+      eq_list_dec top1 top2 eq_binder bs1 bs2 &&
       eq_st_term t1 t2
 
     | Tm_WithInv {name=name1; returns_inv=r1; body=body1},
       Tm_WithInv {name=name2; returns_inv=r2; body=body2} ->
       eq_tm name1 name2 &&
-      eq_opt (fun (b1, r1, is1) (b2, r2, is2) ->
-              eq_tm b1.binder_ty b2.binder_ty &&
+      eq_opt_dec r1 r2 (fun (b1, r1, is1) (b2, r2, is2) ->
+              eq_binder b1 b2 &&
               eq_tm r1 r2 &&
-              eq_tm is1 is2) r1 r2
+              eq_tm is1 is2)
              &&
       eq_st_term body1 body2
 
@@ -295,9 +293,21 @@ and eq_branch (b1 b2 : branch)
   = eq_pattern b1.pat b2.pat &&
     eq_st_term b1.e   b2.e
 
-and eq_aqual (q1 q2 : qualifier) : b:bool{b <==> (q1 == q2)} =
+and eq_binder (b0 b1:binder) : b:bool { b <==> (b0 == b1) } =
+  let open FStar.Reflection.V2 in
+  R.pack_inspect_binder b0;
+  R.pack_inspect_binder b1;
+  let b0 = R.inspect_binder b0 in
+  let b1 = R.inspect_binder b1 in
+  eq_tm b0.sort b1.sort &&
+  eq_aqual b0.qual b1.qual &&
+  eq_list eq_tm b0.attrs b1.attrs
+
+and eq_aqual (q1 q2 : R.aqualv) : b:bool{b <==> (q1 == q2)} =
+  let open FStar.Reflection.V2 in
   match q1, q2 with
-  | Implicit, Implicit
-  | TcArg, TcArg -> true
-  | Meta t1, Meta t2 -> eq_tm t1 t2
+  | Q_Equality, Q_Equality
+  | Q_Implicit, Q_Implicit
+  | Q_Explicit, Q_Explicit -> true
+  | Q_Meta t1, Q_Meta t2 -> eq_tm t1 t2
   | _ -> false

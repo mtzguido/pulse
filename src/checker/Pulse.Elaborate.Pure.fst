@@ -28,12 +28,6 @@ let (let!) (f:option 'a) (g: 'a -> option 'b) : option 'b =
   | None -> None
   | Some x -> g x
 
-let elab_qual = function
-  | None -> R.Q_Explicit
-  | Some Implicit -> R.Q_Implicit
-  | Some TcArg -> R.Q_Meta (`FStar.Tactics.Typeclasses.tcresolve)
-  | Some (Meta t) -> R.Q_Meta t
-
 let elab_observability =
   let open R in
   function
