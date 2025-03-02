@@ -21,7 +21,7 @@ module RT = FStar.Reflection.Typing
 
 open Pulse.Reflection.Util
 
-let post_type t = mk_arrow (t, R.Q_Explicit) slprop_tm
+let post_type t = mk_arrow (RT.mk_simple_binder RT.pp_name_default t) slprop_tm
 let inames_tm = R.(pack_ln (Tv_FVar (pack_fv inames_lid)))
 
 val stt_typing (#f:RT.fstar_env)//needs to bind stt

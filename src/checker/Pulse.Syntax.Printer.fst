@@ -52,11 +52,13 @@ let rec universe_to_string (n:nat) (u:universe)
   | _ -> sprintf "<univ>"
 
 let univ_to_string u = sprintf "u#%s" (universe_to_string 0 u)
-let qual_to_string = function
-  | None -> ""
-  | Some Implicit -> "#"
-  | Some TcArg -> "#[tcresolve]"
-  | Some (Meta t) -> sprintf "#[%s]" (T.term_to_string t)
+
+(* as a prefix before a binder *)
+let aqualv_to_string_pref = function
+  | R.Q_Explicit -> ""
+  | R.Q_Implicit -> "#"
+  | R.Q_Equality -> "$"
+  | R.Q_Meta t -> sprintf "#[%s]" (T.term_to_string t)
 
 let indent (level:string) = level ^ "\t"
 
@@ -74,12 +76,14 @@ let rec collect_binders (until: term_view -> bool) (t:term) : list binder & term
 
 let rec binder_to_string_paren (b:binder)
   : T.Tac string
-  = sprintf "(%s%s:%s)"
-            (match T.unseal b.binder_attrs with
+  = let b = R.inspect_binder b in
+    sprintf "(%s%s%s:%s)"
+            (aqualv_to_string_pref b.qual)
+            (match b.attrs with
              | [] -> ""
              | l -> sprintf "[@@@ %s] " (String.concat ";" (T.map (term_to_string' "") l)))
-            (T.unseal b.binder_ppname.name)
-            (term_to_string' "" b.binder_ty)
+            (T.unseal b.ppname)
+            (term_to_string' "" b.sort)
 
 and term_to_string' (level:string) (t:term) : T.Tac string
   = match inspect_term t with
@@ -135,9 +139,10 @@ let should_paren_term (t:term) : T.Tac bool =
   | _ -> false
 
 let rec binder_to_doc b : T.Tac document =
-  parens (doc_of_string (T.unseal b.binder_ppname.name)
+  let b = R.inspect_binder b in
+  parens (doc_of_string (T.unseal b.ppname)
           ^^ doc_of_string ":"
-          ^^ term_to_doc b.binder_ty)
+          ^^ term_to_doc b.sort)
 
 and term_to_doc t : T.Tac document
   = match inspect_term t with
@@ -198,12 +203,14 @@ and term_to_doc t : T.Tac document
 
 let binder_to_string (b:binder)
   : T.Tac string
-  = sprintf "%s%s:%s"
-            (match T.unseal b.binder_attrs with
+  = let b = R.inspect_binder b in
+    sprintf "%s%s%s:%s"
+            (aqualv_to_string_pref b.qual)
+            (match b.attrs with
              | [] -> ""
              | l -> sprintf "[@@@ %s] " (String.concat ";" (T.map (term_to_string' "") l)))
-            (T.unseal b.binder_ppname.name)
-            (term_to_string b.binder_ty)
+            (T.unseal b.ppname)
+            (term_to_string b.sort)
 
 let ctag_to_string = function
   | STT -> "ST"
@@ -265,14 +272,14 @@ let rec st_term_to_string' (level:string) (t:st_term)
       sprintf "return%s %s"
         (if insert_eq then "" else "_noeq")
         (term_to_string term)
-      
+
     | Tm_STApp {head; arg_qual; arg } ->
       sprintf "(%s%s %s%s)"
         (if dbg_printing then "<stapp>" else "")
         (term_to_string head)
-        (qual_to_string arg_qual)
+        (aqualv_to_string_pref arg_qual) (* arg_qual should really only be Q_Explicit or Q_Implicit, so this is fine. *)
         (term_to_string arg)
-        
+
     | Tm_Bind { binder; head; body } ->
       // if T.unseal binder.binder_ppname.name = "_"
       // then sprintf "%s;\n%s%s" 
@@ -294,9 +301,8 @@ let rec st_term_to_string' (level:string) (t:st_term)
         level
         (st_term_to_string' level body)
   
-    | Tm_Abs { b; q; ascription=c; body } ->
-      sprintf "(fun (%s%s)\n%s\n ({\n%s%s\n}%s)"
-              (qual_to_string q)
+    | Tm_Abs { b; ascription=c; body } ->
+      sprintf "(fun (%s)\n%s\n ({\n%s%s\n}%s)"
               (binder_to_string b)
               (match c.annotated with | None -> "" | Some c -> comp_to_string c)
               (indent level)
@@ -567,9 +573,9 @@ let decl_to_string (d:decl) : T.Tac string =
   | FnDefn {id; isrec; bs; body} ->
     "fn " ^ (if isrec then "rec " else "") ^
      fst (R.inspect_ident id) ^ " " ^ 
-     String.concat " " (T.map (fun (_, b, _) -> binder_to_string b) bs) ^
+     String.concat " " (T.map (fun (b, _) -> binder_to_string b) bs) ^
       " { " ^ st_term_to_string body ^ "}"
   | FnDecl {id; bs} ->
     "fn " ^
     fst (R.inspect_ident id) ^ " " ^
-    String.concat " " (T.map (fun (_, b, _) -> binder_to_string b) bs)
+    String.concat " " (T.map (fun (b, _) -> binder_to_string b) bs)

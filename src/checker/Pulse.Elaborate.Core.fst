@@ -35,19 +35,19 @@ let elab_frame (c:comp_st) (frame:term) (e:R.term) =
   let pre = comp_pre c in
   let post = comp_post c in
   if C_ST? c
-  then mk_frame_stt u ty pre (mk_abs ty R.Q_Explicit post) frame e
+  then mk_frame_stt u ty pre (mk_abs0 ty post) frame e
   else if C_STAtomic? c
   then let opened = comp_inames c in
-       mk_frame_stt_atomic u ty opened pre (mk_abs ty R.Q_Explicit post) frame e
-  else mk_frame_stt_ghost u ty pre (mk_abs ty R.Q_Explicit post) frame e
+       mk_frame_stt_atomic u ty opened pre (mk_abs0 ty post) frame e
+  else mk_frame_stt_ghost u ty pre (mk_abs0 ty post) frame e
 
 let elab_sub (c1 c2:comp_st) (e:R.term) =
   let ty = comp_res c1 in
   let u = comp_u c1 in
   let pre1 = comp_pre c1 in
   let pre2 = comp_pre c2 in
-  let post1 = mk_abs ty R.Q_Explicit (comp_post c1) in
-  let post2 = mk_abs ty R.Q_Explicit (comp_post c2) in
+  let post1 = mk_abs0 ty (comp_post c1) in
+  let post2 = mk_abs0 ty (comp_post c2) in
   if C_ST? c1
   then mk_sub_stt u ty pre1 pre2 post1 post2 e
   else if C_STAtomic? c1
@@ -175,7 +175,8 @@ let rec elab_st_typing (#g:env)
       let ty = b.binder_ty in
       let ppname = b.binder_ppname.name in
       let body = elab_st_typing body_typing in
-      mk_abs_with_name ppname ty (elab_qual qual) (RT.close_term body x) //this closure should be provably redundant by strengthening the conditions on x
+      let b = R.pack_binder { ppname; sort = ty; qual; attrs = [] } in
+      mk_abs b (RT.close_term body x) //this closure should be provably redundant by strengthening the conditions on x
 
 
     | T_STApp _ head _ qual _ arg _ _

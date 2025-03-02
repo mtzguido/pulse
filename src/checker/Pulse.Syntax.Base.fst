@@ -185,7 +185,7 @@ let rec eq_st_term (t1 t2:st_term)
     | Tm_STApp { head=h1; arg_qual=q1; arg=t1},
       Tm_STApp { head=h2; arg_qual=q2; arg=t2} ->
       eq_tm h1 h2 &&
-      eq_opt_dec q1 q2 eq_aqual &&
+      eq_aqual q1 q2 &&
       eq_tm t1 t2
 
     | Tm_Bind { binder=b1; head=t1; body=k1 },

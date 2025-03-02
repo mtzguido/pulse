@@ -69,14 +69,15 @@ let rec freshen_binders (bs:binders) : Tot binders (decreases length bs) =
                                                            (binder_to_term b')]) bs in
     b' :: freshen_binders bs
 
-let elab_b (qbv : option qualifier & binder & bv) : Tot Tactics.NamedView.binder =
-  let q, b, bv = qbv in
+let elab_b (bv : binder & bv) : Tot Tactics.NamedView.binder =
+  let b, bv = bv in
+  let bb = R.inspect_binder b in
   {
     uniq = bv.bv_index;
-    ppname = b.binder_ppname.name;
-    sort = b.binder_ty;
-    qual = elab_qual q;
-    attrs = [];
+    ppname = bb.ppname;
+    sort = bb.sort;
+    qual = bb.qual;
+    attrs = bb.attrs;
   }
 
 let add_knot (g : env) (rng : R.range)
@@ -90,7 +91,7 @@ let add_knot (g : env) (rng : R.range)
   let r_res = elab_comp comp in
   debug_main g
     (fun _ -> Printf.sprintf "add_knot: bs = %s\n"
-              (string_of_list (fun (_, b,_) -> P.binder_to_string b) bs));
+              (string_of_list (fun (b,_) -> P.binder_to_string b) bs));
 
   (* for
        fn rec f (x1:t1) ... (xn:tn) :
@@ -183,13 +184,12 @@ let add_knot (g : env) (rng : R.range)
     fail g (Some d.range) "error: r_ty is Tv_unknown in add_knot?";
   let b_knot =
     let s, rng = inspect_ident id in
-    let b = mk_binder s rng (wr r_ty rng) in
+    let b = RT.mk_simple_binder (seal s) (wr r_ty rng) in
     let bv = {
-      bv_index = b_knot._3.bv_index;
+      bv_index = b_knot._2.bv_index;
       bv_ppname = { name = seal s; range = rng }
     } in
-    let q = None in
-    (q, b, bv)
+    (b, bv)
   in
   let id' =
     let s, rng = inspect_ident id in

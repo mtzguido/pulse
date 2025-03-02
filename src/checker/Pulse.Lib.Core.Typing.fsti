@@ -27,7 +27,7 @@ let return_post_with_eq (u:universe) (a:term) (e:term) (p:term) (x:var) : term =
   let eq2_tm = mk_eq2 u a x_tm e in
   let p_app_x = pack_ln (Tv_App p (x_tm, Q_Explicit)) in  
   let star_tm = mk_star p_app_x (mk_pure eq2_tm) in
-  mk_abs a Q_Explicit (RT.subst_term star_tm [ RT.ND x 0 ])
+  mk_abs0 a (RT.subst_term star_tm [ RT.ND x 0 ])
 
 let return_stt_comp (u:universe) (a:term) (e:term) (p:term) (x:var) : term =
   mk_stt_comp u a
@@ -43,7 +43,7 @@ val return_stt_typing
   (x:var{None? (RT.lookup_bvar g x)})
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (e_typing:RT.tot_typing g e a)
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_return u a e p)
@@ -60,7 +60,7 @@ val return_stt_noeq_typing
   (#p:term)
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (x_typing:RT.tot_typing g x a)
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_return_noeq u a x p)
@@ -81,7 +81,7 @@ val return_stt_atomic_typing
   (x:var{None? (RT.lookup_bvar g x)})
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (e_typing:RT.tot_typing g e a)
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_atomic_return u a e p)
@@ -98,7 +98,7 @@ val return_stt_atomic_noeq_typing
   (#p:term)
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (x_typing:RT.tot_typing g x a)
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_atomic_return_noeq u a x p)
@@ -118,7 +118,7 @@ val return_stt_ghost_typing
   (x:var{None? (RT.lookup_bvar g x)})
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (e_typing:RT.ghost_typing g e a)
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_ghost_return u a e p)
@@ -135,7 +135,7 @@ val return_stt_ghost_noeq_typing
   (#p:term)
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (x_typing:RT.ghost_typing g x a)
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_ghost_return_noeq u a x p)
@@ -159,7 +159,7 @@ val while_typing
   (#body:term)
   (inv_typing:RT.tot_typing g
                 inv
-                (mk_arrow (bool_tm, Q_Explicit) slprop_tm))
+                (mk_arrow0 bool_tm slprop_tm))
   (cond_typing:RT.tot_typing g
                  cond
                  (mk_stt_comp uzero bool_tm (mk_exists uzero bool_tm inv) inv))
@@ -167,11 +167,11 @@ val while_typing
                  body
                  (mk_stt_comp uzero unit_tm
                     (pack_ln (Tv_App inv (true_tm, Q_Explicit)))
-                    (mk_abs unit_tm Q_Explicit (mk_exists uzero bool_tm inv))))
+                    (mk_abs0 unit_tm (mk_exists uzero bool_tm inv))))
   : RT.tot_typing g
       (mk_while inv cond body)
       (mk_stt_comp uzero unit_tm (mk_exists uzero bool_tm inv)
-         (mk_abs unit_tm Q_Explicit (pack_ln (Tv_App inv (false_tm, Q_Explicit)))))
+         (mk_abs0 unit_tm (pack_ln (Tv_App inv (false_tm, Q_Explicit)))))
 
 let par_post (u:universe) (aL aR:term) (postL postR:term) (x:var) : term =
   let x_tm = RT.var_as_term x in
@@ -191,9 +191,9 @@ val par_typing
   (aL_typing:RT.tot_typing g aL (pack_ln (Tv_Type u)))
   (aR_typing:RT.tot_typing g aR (pack_ln (Tv_Type u)))
   (preL_typing:RT.tot_typing g preL slprop_tm)
-  (postL_typing:RT.tot_typing g postL (mk_arrow (aL, Q_Explicit) slprop_tm))
+  (postL_typing:RT.tot_typing g postL (mk_arrow0 aL slprop_tm))
   (preR_typing:RT.tot_typing g preR slprop_tm)
-  (postR_typing:RT.tot_typing g postR (mk_arrow (aR, Q_Explicit) slprop_tm))
+  (postR_typing:RT.tot_typing g postR (mk_arrow0 aR slprop_tm))
   (eL_typing:RT.tot_typing g eL (mk_stt_comp u aL preL postL))
   (eR_typing:RT.tot_typing g eR (mk_stt_comp u aR preR postR))
 
@@ -201,7 +201,7 @@ val par_typing
             (mk_par u aL aR preL postL preR postR eL eR)
             (mk_stt_comp u (mk_tuple2 u u aL aR)
                (mk_star preL preR)
-               (mk_abs (mk_tuple2 u u aL aR) Q_Explicit (par_post u aL aR postL postR x))))
+               (mk_abs0 (mk_tuple2 u u aL aR) (par_post u aL aR postL postR x))))
 
 val exists_inversion
   (#g:env)
@@ -213,7 +213,7 @@ val exists_inversion
               slprop_tm)
   : GTot (RT.tot_typing g
             p
-            (mk_arrow (a, Q_Explicit) slprop_tm))
+            (mk_arrow0 a slprop_tm))
 
 (*
 
@@ -232,7 +232,7 @@ let elim_exists_post_body (u:universe) (a:term) (p:term) (x:var) =
 
 let elim_exists_post (u:universe) (a:term) (p:term) (x:var) =
   let erased_a = mk_erased u a in
-  mk_abs erased_a Q_Explicit (elim_exists_post_body u a p x)
+  mk_abs0 erased_a (elim_exists_post_body u a p x)
 
 val elim_exists_typing
   (#g:env)
@@ -241,7 +241,7 @@ val elim_exists_typing
   (#p:term)
   (x:var{None? (RT.lookup_bvar g x)})
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
   : GTot (RT.tot_typing g
             (mk_elim_exists u a p)
             (mk_stt_ghost_comp
@@ -267,13 +267,13 @@ val intro_exists_typing
   (#p:term)
   (#e:term)
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
-  (p_typing:RT.tot_typing g p (mk_arrow (a, Q_Explicit) slprop_tm))
+  (p_typing:RT.tot_typing g p (mk_arrow0 a slprop_tm))
   (e_typing:RT.ghost_typing g e a)
   : GTot (RT.tot_typing g
             (mk_intro_exists u a p e)
             (mk_stt_ghost_comp uzero unit_tm tm_emp_inames
                (pack_ln (Tv_App p (e, Q_Explicit)))
-               (mk_abs unit_tm Q_Explicit (mk_exists u a p))))
+               (mk_abs0 unit_tm (mk_exists u a p))))
 
 (*
 
@@ -293,7 +293,7 @@ val stt_admit_typing
   (#q:term)
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (p_typing:RT.tot_typing g p slprop_tm)
-  (q_typing:RT.tot_typing g q (mk_arrow (a, Q_Explicit) slprop_tm))
+  (q_typing:RT.tot_typing g q (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_admit u a p q)
@@ -307,7 +307,7 @@ val stt_atomic_admit_typing
   (#q:term)
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (p_typing:RT.tot_typing g p slprop_tm)
-  (q_typing:RT.tot_typing g q (mk_arrow (a, Q_Explicit) slprop_tm))
+  (q_typing:RT.tot_typing g q (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_atomic_admit u a p q)
@@ -321,7 +321,7 @@ val stt_ghost_admit_typing
   (#q:term)
   (a_typing:RT.tot_typing g a (pack_ln (Tv_Type u)))
   (p_typing:RT.tot_typing g p slprop_tm)
-  (q_typing:RT.tot_typing g q (mk_arrow (a, Q_Explicit) slprop_tm))
+  (q_typing:RT.tot_typing g q (mk_arrow0 a slprop_tm))
 
   : GTot (RT.tot_typing g
             (mk_stt_ghost_admit u a p q)
@@ -342,7 +342,7 @@ val rewrite_typing
               unit_tm
               tm_emp_inames
               p
-              (mk_abs unit_tm Q_Explicit q)))
+              (mk_abs0 unit_tm q)))
 
 // mk_star pre (mk_pts_to a (RT.bound_var 0) tm_full_perm init
 let with_local_body_pre (pre:term) (a:term) (x:term) (init:term) : term =
@@ -357,12 +357,12 @@ let with_local_body_post_body (post:term) (a:term) (x:term) : term =
   // exists_ (R.pts_to r full_perm)
   let exists_tm =
     mk_exists (pack_universe Uv_Zero) a
-      (mk_abs a Q_Explicit
+      (mk_abs0 a
          (mk_pts_to a x tm_full_perm (RT.bound_var 0))) in
   mk_star post exists_tm
 
 let with_local_body_post (post:term) (a:term) (ret_t:term) (x:term) : term =
-  mk_abs ret_t Q_Explicit (with_local_body_post_body post a x)
+  mk_abs0 ret_t (with_local_body_post_body post a x)
 
 val with_local_typing
   (#g:env)
@@ -379,7 +379,7 @@ val with_local_typing
   (pre_typing:RT.tot_typing g pre slprop_tm)
   (ret_t_typing:RT.tot_typing g ret_t (pack_ln (Tv_Type u)))
   (post_typing:RT.tot_typing g (RT.mk_abs ret_t Q_Explicit post)
-                               (mk_arrow (ret_t, Q_Explicit) slprop_tm))
+                               (mk_arrow0 ret_t slprop_tm))
   (body_typing:RT.tot_typing (RT.extend_env g x (mk_ref a)) 
                  body
                  (mk_stt_comp u ret_t
@@ -388,7 +388,7 @@ val with_local_typing
 
   : GTot (RT.tot_typing g (mk_withlocal u a init pre ret_t (RT.mk_abs ret_t Q_Explicit post)
                                                            (RT.mk_abs (mk_ref a) Q_Explicit (RT.close_term body x)))
-                          (mk_stt_comp u ret_t pre (mk_abs ret_t Q_Explicit post)))
+                          (mk_stt_comp u ret_t pre (mk_abs0 ret_t post)))
 
 let with_localarray_body_pre (pre:term) (a:term) (arr:term) (init:term) (len:term) : term =
   let pts_to : term =
@@ -404,12 +404,12 @@ let with_localarray_body_post_body (post:term) (a:term) (arr:term) : term =
   // exists_ (A.pts_to arr full_perm)
   let exists_tm =
     mk_exists uzero (mk_seq uzero a)
-      (mk_abs (mk_seq uzero a) Q_Explicit
+      (mk_abs0 (mk_seq uzero a)
          (mk_array_pts_to a arr tm_full_perm (RT.bound_var 0))) in
   mk_star post exists_tm
 
 let with_localarray_body_post (post:term) (a:term) (ret_t:term) (arr:term) : term =
-  mk_abs ret_t Q_Explicit (with_localarray_body_post_body post a arr)
+  mk_abs0 ret_t (with_localarray_body_post_body post a arr)
 
 val with_localarray_typing
   (#g:env)
@@ -427,7 +427,7 @@ val with_localarray_typing
   (len_typing:RT.tot_typing g len szt_tm)
   (pre_typing:RT.tot_typing g pre slprop_tm)
   (ret_t_typing:RT.tot_typing g ret_t (pack_ln (Tv_Type u)))
-  (post_typing:RT.tot_typing g (RT.mk_abs ret_t Q_Explicit post) (mk_arrow (ret_t, Q_Explicit) slprop_tm))
+  (post_typing:RT.tot_typing g (RT.mk_abs ret_t Q_Explicit post) (mk_arrow0 ret_t slprop_tm))
   (body_typing:RT.tot_typing (RT.extend_env g x (mk_array a))
                              body
                              (mk_stt_comp u ret_t
@@ -435,4 +435,4 @@ val with_localarray_typing
                                 (with_localarray_body_post post a ret_t (RT.var_as_term x))))
   : GTot (RT.tot_typing g (mk_withlocalarray u a init len pre ret_t (RT.mk_abs ret_t Q_Explicit post)
                                                                     (RT.mk_abs (mk_array a) Q_Explicit (RT.close_term body x)))
-                          (mk_stt_comp u ret_t pre (mk_abs ret_t Q_Explicit post)))
+                          (mk_stt_comp u ret_t pre (mk_abs0 ret_t post)))

@@ -38,7 +38,7 @@ let pat_const c = Pat_Constant c
 let pat_cons fv vs = Pat_Cons fv vs
 
 let tm_return expected_type insert_eq term = Tm_Return { expected_type; insert_eq; term }
-let tm_abs b q ascription body = Tm_Abs { b; q; ascription; body }
+let tm_abs b ascription body = Tm_Abs { b; ascription; body }
 let tm_stapp head arg_qual arg = Tm_STApp { head; arg_qual; arg }
 let tm_bind binder head body = Tm_Bind { binder; head; body }
 let tm_totbind binder head body = Tm_TotBind { binder; head; body }

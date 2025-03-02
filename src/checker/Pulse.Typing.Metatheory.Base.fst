@@ -199,20 +199,20 @@ let rec st_typing_weakening g g' t c d g1
         (decreases d) =
   
   match d with
-  | T_Abs g x q b u body c b_typing body_typing ->
+  | T_Abs g x b u body c b_typing body_typing ->
     // T_Abs is used only at the top, should not come up
     assume false;
     let x = fresh (push_env (push_env g g1) g') in
-    T_Abs g x q b u body c (RU.magic #(tot_typing _ _ _) ()) 
+    T_Abs g x b u body c (RU.magic #(tot_typing _ _ _) ()) 
                           (st_typing_weakening g g' body c body_typing g1)
-  | T_STApp _ head ty q res arg _ _ ->
-    T_STApp _ head ty q res arg (RU.magic #(tot_typing _ _ _) ()) (RU.magic #(tot_typing _ _ _) ())
+  | T_STApp _ head b res arg _ _ ->
+    T_STApp _ head b res arg (RU.magic #(tot_typing _ _ _) ()) (RU.magic #(tot_typing _ _ _) ())
 
-  | T_STGhostApp _ head ty q res arg _ _ _ _ ->
+  | T_STGhostApp _ head b res arg _ _ _ _ ->
     // candidate for renaming
     let x = fresh (push_env (push_env g g1) g') in
     assume (~ (x `Set.mem` freevars_comp res));
-    T_STGhostApp _ head ty q res arg x (RU.magic ()) (RU.magic ()) (RU.magic ())
+    T_STGhostApp _ head b res arg x (RU.magic ()) (RU.magic ()) (RU.magic ())
 
   | T_Return _ c use_eq u t e post x_old _ _ _ ->
     let x = fresh (push_env (push_env g g1) g') in
@@ -239,23 +239,23 @@ let rec st_typing_weakening g g' t c d g1
     assume (~ (x `Set.mem` dom g1));
     let d_e2
       : st_typing (push_binding (push_env g g') x ppname_default (comp_res c1))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = d_e2 in
     assert (equal (push_binding (push_env g g') x ppname_default (comp_res c1))
                   (push_env g (push_binding g' x ppname_default (comp_res c1))));
     let d_e2
       : st_typing (push_env g (push_binding g' x ppname_default (comp_res c1)))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = d_e2 in
     let d_e2
       : st_typing (push_env (push_env g g1) (push_binding g' x ppname_default (comp_res c1)))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = st_typing_weakening g (push_binding g' x ppname_default (comp_res c1)) _ _ d_e2 g1 in
     assert (equal (push_env (push_env g g1) (push_binding g' x ppname_default (comp_res c1)))
                   (push_binding (push_env (push_env g g1) g') x ppname_default (comp_res c1)));
     let d_e2
       : st_typing (push_binding (push_env (push_env g g1) g') x ppname_default (comp_res c1))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = d_e2 in
     let d_bc = bind_comp_weakening g g' d_bc g1 in
     T_Bind _ e1 e2 c1 c2 b x c d_e1 (RU.magic ()) d_e2 d_bc
@@ -273,23 +273,23 @@ let rec st_typing_weakening g g' t c d g1
     assume (~ (x `Set.mem` dom g1));
     let d_e2
       : st_typing (push_binding (push_env g g') x ppname_default (comp_res c1))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = d_e2 in
     assert (equal (push_binding (push_env g g') x ppname_default (comp_res c1))
                   (push_env g (push_binding g' x ppname_default (comp_res c1))));
     let d_e2
       : st_typing (push_env g (push_binding g' x ppname_default (comp_res c1)))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = d_e2 in
     let d_e2
       : st_typing (push_env (push_env g g1) (push_binding g' x ppname_default (comp_res c1)))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = st_typing_weakening g (push_binding g' x ppname_default (comp_res c1)) _ _ d_e2 g1 in
     assert (equal (push_env (push_env g g1) (push_binding g' x ppname_default (comp_res c1)))
                   (push_binding (push_env (push_env g g1) g') x ppname_default (comp_res c1)));
     let d_e2
       : st_typing (push_binding (push_env (push_env g g1) g') x ppname_default (comp_res c1))
-                  (open_st_term_nv e2 (b.binder_ppname, x))
+                  (open_st_term_nv e2 (binder_sppname b, x))
                   c2 = d_e2 in
     let c2_typing = comp_typing_weakening g g' c2_typing g1 in
     T_BindFn _ e1 e2 c1 c2 b x d_e1 u (RU.magic #(tot_typing _ _ _) ()) d_e2 c2_typing
@@ -588,24 +588,22 @@ let rec st_typing_subst g x t g' #e #eff e_typing #e1 #c1 e1_typing _
   let ss = nt x e in
 
   match e1_typing with
-  | T_Abs _ _ _ _ _ _ _ _ _ ->
+  | T_Abs _ _ _ _ _ _ _ _ ->
     Pervasives.coerce_eq (RU.magic ()) e1_typing
 
-  | T_STApp _ head ty q res arg _ _ ->
+  | T_STApp _ head b res arg _ _ ->
     admit ();
     T_STApp _ (subst_term head ss)
-              (subst_term ty ss)
-              q
+              (subst_binder b ss)
               (subst_comp res ss)
               (subst_term arg ss)
               (RU.magic ())
               (RU.magic ())
 
- | T_STGhostApp _ head ty q res arg x _ _ _ ->
+ | T_STGhostApp _ head b res arg x _ _ _ ->
     admit ();
     T_STGhostApp _ (subst_term head ss)
-              (subst_term ty ss)
-              q
+              (subst_binder b ss)
               (subst_comp res ss)
               (subst_term arg ss)
               x

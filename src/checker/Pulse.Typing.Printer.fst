@@ -22,10 +22,10 @@ open Pulse.Typing
 let rec print_st_typing #g #t #c (d:st_typing g t c)
   : T.Tac string 
   = match d with
-    | T_Abs g x q b u body c tt body_typing ->
+    | T_Abs g x b u body c tt body_typing ->
       Printf.sprintf "(T_Abs ... %s)" (print_st_typing body_typing)
     
-    | T_STApp _ _ _ _ _ _ _ _ ->
+    | T_STApp _ _ _ _ _ _ _ ->
       "T_STApp"
     
     | T_Return _ _ _ _ _ _ _ _ _ _ _ ->

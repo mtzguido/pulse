@@ -64,21 +64,26 @@ let elab_comp (c:comp)
 
     | C_ST c ->
       let u, res, pre, post = elab_st_comp c in
-      mk_stt_comp u res pre (mk_abs res R.Q_Explicit post)
+      let b = RT.mk_simple_binder RT.pp_name_default res in
+      let post = mk_abs b post in
+      mk_stt_comp u res pre post
 
     | C_STAtomic inames obs c ->
       let u, res, pre, post = elab_st_comp c in
-      let post = mk_abs res R.Q_Explicit post in
+      let b = RT.mk_simple_binder RT.pp_name_default res in
+      let post = mk_abs b post in
       mk_stt_atomic_comp (elab_observability obs) u res inames pre post
 
     | C_STGhost inames c ->
       let u, res, pre, post = elab_st_comp c in
-      mk_stt_ghost_comp u res inames pre (mk_abs res R.Q_Explicit post)
+      let b = RT.mk_simple_binder RT.pp_name_default res in
+      let post = mk_abs b post in
+      mk_stt_ghost_comp u res inames pre post
 
 let elab_stt_equiv (g:R.env) (c:comp{C_ST? c}) (pre:R.term) (post:R.term)
   (eq_pre:RT.equiv g pre (comp_pre c))
   (eq_post:RT.equiv g post
-                      (mk_abs (comp_res c) R.Q_Explicit (comp_post c)))
+                      (mk_abs (RT.mk_simple_binder RT.pp_name_default (comp_res c)) (comp_post c)))
   : RT.equiv g
       (let C_ST {u;res} = c in
        mk_stt_comp u
@@ -91,10 +96,11 @@ let elab_stt_equiv (g:R.env) (c:comp{C_ST? c}) (pre:R.term) (post:R.term)
     (comp_u c)
     (comp_res c)
     _ _ _ _ _ (RT.Rel_refl _ _ _) eq_pre eq_post
+
 let elab_statomic_equiv (g:R.env) (c:comp{C_STAtomic? c}) (pre:R.term) (post:R.term)
   (eq_pre:RT.equiv g pre (comp_pre c))
   (eq_post:RT.equiv g post
-                    (mk_abs (comp_res c) R.Q_Explicit (comp_post c)))
+                    (mk_abs (RT.mk_simple_binder RT.pp_name_default (comp_res c)) (comp_post c)))
   : RT.equiv g
       (let C_STAtomic inames obs {u;res} = c in
        mk_stt_atomic_comp (elab_observability obs) u
@@ -121,7 +127,7 @@ let elab_statomic_equiv (g:R.env) (c:comp{C_STAtomic? c}) (pre:R.term) (post:R.t
 let elab_stghost_equiv (g:R.env) (c:comp{C_STGhost? c}) (pre:R.term) (post:R.term)
   (eq_pre:RT.equiv g pre (comp_pre c))
   (eq_post:RT.equiv g post
-                    (mk_abs (comp_res c) R.Q_Explicit (comp_post c)))
+                    (mk_abs (RT.mk_simple_binder RT.pp_name_default (comp_res c)) (comp_post c)))
   : RT.equiv g
       (let C_STGhost inames {u;res} = c in
        mk_stt_ghost_comp u

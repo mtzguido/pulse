@@ -94,10 +94,9 @@ let tm_pureabs (ppname:R.ppname_t) (ty : term) (q : R.aqualv) (body:term) rng : 
   let r = pack (Tv_Abs b body) in
   set_range r rng
 
-let tm_arrow (b:binder) (q:R.aqualv) (c:comp) : term =
-  set_range (mk_arrow_with_name b.binder_ppname.name (b.binder_ty, elab_qual q)
-                                                     (elab_comp c))
-            (union_ranges (range_of_term b.binder_ty) (range_of_comp c))
+let tm_arrow (b:binder) (c:comp) : term =
+  set_range (mk_arrow b (elab_comp c))
+            (union_ranges (range_of_term (binder_sort b)) (range_of_comp c))
 
 let tm_type (u:universe) : term = RT.tm_type u
 
@@ -140,14 +139,9 @@ let is_fvar (t:term) : option (R.name & list universe) =
   | Tv_UInst fv us -> Some (inspect_fv fv, us)
   | _ -> None
 
-let readback_qual = function
-  | R.Q_Implicit -> Some Implicit
-  | _ -> None
-
-let is_pure_app (t:term) : option (term & option qualifier & term) =
+let is_pure_app (t:term) : option (term & R.aqualv & term) =
   match R.inspect_ln t with
   | R.Tv_App hd (arg, q) ->
-    let q = readback_qual q in
     Some (hd, q, arg)
   | _ -> None
 
@@ -157,62 +151,49 @@ let leftmost_head (t:term) : option term =
 
 let is_fvar_app (t:term) : option (R.name &
                                    list universe &
-                                   option qualifier &
-                                   option term) =
+                                   option (R.aqualv & term)) =
   match is_fvar t with
-  | Some (l, us) -> Some (l, us, None, None)
+  | Some (l, us) -> Some (l, us, None)
   | None ->
     match is_pure_app t with
     | Some (head, q, arg) ->
       (match is_fvar head with
-       | Some (l, us) -> Some (l, us, q, Some arg)
+       | Some (l, us) -> Some (l, us, Some (q, arg))
        | None -> None)
     | _ -> None
 
-let is_arrow (t:term) : option (binder & option qualifier & comp) =
+let is_arrow (t:term) : option (binder & comp) =
   match R.inspect_ln_unascribe t with
   | R.Tv_Arrow b c ->
-    let {ppname;qual;sort} = R.inspect_binder b in
-    begin match qual with
-          | R.Q_Meta _ -> None
-          | _ ->
-            let q = readback_qual qual in
-            let c_view = R.inspect_comp c in
-            let ret (c_t:R.typ) =
-              let binder_ty = sort in
-              let? c =
-                match readback_comp c_t with
-                | Some c -> Some c <: option Pulse.Syntax.Base.comp
-                | None -> None in
-              Some (mk_binder_ppname
-                      binder_ty
-                      (mk_ppname ppname (T.range_of_term t)),
-                      q,
-                      c) in
-                      
-            begin match c_view with
-            | R.C_Total c_t -> ret c_t
-            | R.C_Eff _ eff_name c_t _ _ ->
-              //
-              // Consider Tot effect with decreases also
-              //
-              if eff_name = tot_lid
-              then ret c_t
-              else None
-            | _ -> None
-            end
+    let c_view = R.inspect_comp c in
+    let ret (c_t:R.typ) =
+      let? c =
+        match readback_comp c_t with
+        | Some c -> Some c <: option Pulse.Syntax.Base.comp
+        | None -> None in
+      Some (b, c)
+    in
+    begin match c_view with
+    | R.C_Total c_t -> ret c_t
+    | R.C_Eff _ eff_name c_t _ _ ->
+      //
+      // Consider Tot effect with decreases also
+      //
+      if eff_name = tot_lid
+      then ret c_t
+      else None
+    | _ -> None
     end
-          
   | _ -> None
 
 // TODO: write it better, with pattern matching on reflection syntax
 let is_eq2 (t:term) : option (term & term & term) =
   match is_pure_app t with
-  | Some (head, None, a2) ->
+  | Some (head, R.Q_Explicit, a2) ->
     (match is_pure_app head with
-     | Some (head, None, a1) ->
+     | Some (head, R.Q_Explicit, a1) ->
        (match is_pure_app head with
-        | Some (head, Some Implicit, ty) ->
+        | Some (head, R.Q_Implicit, ty) ->
           (match is_fvar head with
            | Some (l, _) ->
              if l = ["Pulse"; "Steel"; "Wrapper"; "eq2_prop"] ||
@@ -226,9 +207,9 @@ let is_eq2 (t:term) : option (term & term & term) =
 
 let unreveal (t:term) : option term =
   match is_pure_app t with
-  | Some (head, None, arg) ->
+  | Some (head, R.Q_Explicit, arg) ->
     (match is_pure_app head with
-     | Some (head, Some Implicit, _) ->
+     | Some (head, R.Q_Implicit, _) ->
        (match is_fvar head with
         | Some (l, _) ->
           if l = ["FStar"; "Ghost"; "reveal"]
@@ -240,23 +221,23 @@ let unreveal (t:term) : option term =
 
 let is_arrow_tm_arrow (t:term)
   : Lemma (requires Some? (is_arrow t))
-          (ensures (let Some (b, q, c) = is_arrow t in
-                    t == tm_arrow b q c)) =
+          (ensures (let Some (b, c) = is_arrow t in
+                    t == tm_arrow b c)) =
   admit ()
 
 let is_fvar_app_tm_app (t:term)
   : Lemma (requires Some? (is_fvar_app t))
-          (ensures (let Some (l, us, q_opt, arg_opt) = is_fvar_app t in
+          (ensures (let Some (l, us, arg_opt) = is_fvar_app t in
                     match us, arg_opt with
                     | [], None -> t == tm_fvar (as_fv l)
-                    | [], Some arg -> t == tm_pureapp (tm_fvar (as_fv l)) q_opt arg
+                    | [], Some (qual, arg) -> t == tm_pureapp (tm_fvar (as_fv l)) qual arg
                     | us, None -> t == tm_uinst (as_fv l) us
-                    | us, Some arg ->
-                      t == tm_pureapp (tm_uinst (as_fv l) us) q_opt arg)) =
+                    | us, Some (qual, arg) ->
+                      t == tm_pureapp (tm_uinst (as_fv l) us) qual arg)) =
   admit ()
 
 let mk_squash (u:universe) (t:term) : term =
-  tm_pureapp (tm_uinst (as_fv R.squash_qn) [u]) None t
+  tm_pureapp (tm_uinst (as_fv R.squash_qn) [u]) R.Q_Explicit t
 
 //
 // A separation logic specific view of pure F* terms
@@ -306,8 +287,8 @@ let pack_term_view (top:term_view) (r:range)
       
     | Tm_ExistsSL u b body
     | Tm_ForallSL u b body ->
-      let t = set_range_of b.binder_ty b.binder_ppname.range in
-      let abs = mk_abs_with_name_and_range b.binder_ppname.name b.binder_ppname.range t R.Q_Explicit body in
+      let t = (inspect_binder b).sort in
+      let abs = mk_abs b body in
       if Tm_ExistsSL? top
       then w (mk_exists u t abs)
       else w (mk_forall u t abs)
@@ -336,10 +317,10 @@ let tm_star (l:slprop) (r:slprop) : term =
                  (union_ranges (range_of_term l) (range_of_term r))
 let tm_exists_sl (u:universe) (b:binder) (body:slprop) : term =
   pack_term_view (Tm_ExistsSL u b body)
-                 (union_ranges (range_of_term b.binder_ty) (range_of_term body))
+                 (union_ranges (range_of_term (binder_sort b)) (range_of_term body))
 let tm_forall_sl (u:universe) (b:binder) (body:slprop) : term =
   pack_term_view (Tm_ForallSL u b body)
-                 (union_ranges (range_of_term b.binder_ty) (range_of_term body))
+                 (union_ranges (range_of_term (binder_sort b)) (range_of_term body))
 let tm_iname = tm_fvar (as_fv iname_lid)
 let tm_inv (i p:term) : term =
   pack_term_view (Tm_Inv i p)
@@ -420,8 +401,6 @@ let rec inspect_term (t:R.term)
           let t2 : R.term = fst a2 in
           match inspect_ln t2 with
           | Tv_Abs b body ->
-            let bview = inspect_binder b in
-            let b = mk_binder_ppname t1 (mk_ppname bview.ppname (binder_range b)) in
             if inspect_fv fv = exists_lid
             then Tm_ExistsSL u b body
             else Tm_ForallSL u b body

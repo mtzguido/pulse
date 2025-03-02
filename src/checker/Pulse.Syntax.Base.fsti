@@ -200,7 +200,7 @@ type st_term' =
     }
   | Tm_STApp {
       head:term;
-      arg_qual:option R.aqualv; (* Can only be Q_Implicit or Q_Explicit *)
+      arg_qual:R.aqualv; (* Can only be Q_Implicit or Q_Explicit *)
       arg:term;
     }
   | Tm_Bind { 
@@ -410,3 +410,21 @@ let ppname_for_uvar (p : ppname) : T.Tac ppname =
   {
     p with name = T.seal ("?" ^ T.unseal p.name);
   }
+
+let binder_sort (b:binder) : term     = (R.inspect_binder b).sort
+let binder_qual (b:binder) : R.aqualv = (R.inspect_binder b).qual
+let binder_ppname (b:binder) : RT.pp_name_t = (R.inspect_binder b).ppname
+let binder_sppname (b:binder) : ppname =
+  { 
+    name = binder_ppname b;
+    range = Pulse.RuntimeUtils.binder_range b;
+  }
+
+(* The aqual that should be used for an application of a binder
+   that has aqual q. *)
+let aqualv_for_app (q:R.aqualv) : R.aqualv =
+  match q with
+  | R.Q_Implicit
+  | R.Q_Meta _ -> R.Q_Implicit
+  | R.Q_Explicit
+  | R.Q_Equality -> R.Q_Explicit

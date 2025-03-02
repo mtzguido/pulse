@@ -22,6 +22,7 @@ open Pulse.Common
 
 module L = FStar.List.Tot
 
+module R = FStar.Reflection.V2
 module RT = FStar.Reflection.Typing
 module RU = Pulse.RuntimeUtils
 module U = Pulse.Syntax.Pure
@@ -84,19 +85,19 @@ let rec freevars_st (t:st_term)
     | Tm_Return { expected_type; term } ->
       Set.union (freevars expected_type) (freevars term)
     | Tm_Abs { b; ascription; body } ->
-      Set.union (freevars b.binder_ty) 
+      Set.union (freevars (binder_sort b)) 
                 (Set.union (freevars_st body)
                            (freevars_ascription ascription))
     | Tm_STApp { head; arg } ->
       Set.union (freevars head) (freevars arg)
     | Tm_Bind { binder; head; body } ->
       Set.union 
-        (Set.union (freevars binder.binder_ty) 
+        (Set.union (freevars (binder_sort binder)) 
                    (freevars_st head))
         (freevars_st body)
     | Tm_TotBind { binder; head; body } ->
       Set.union
-        (Set.union (freevars binder.binder_ty)
+        (Set.union (freevars (binder_sort binder))
                    (freevars head))
         (freevars_st body)
     | Tm_If { b; then_; else_; post } ->
@@ -128,12 +129,12 @@ let rec freevars_st (t:st_term)
                               (freevars post2)))
 
     | Tm_WithLocal { binder; initializer; body } ->
-      Set.union (freevars binder.binder_ty)
+      Set.union (freevars (binder_sort binder))
                 (Set.union (freevars initializer)
                            (freevars_st body))
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      Set.union (freevars binder.binder_ty)
+      Set.union (freevars (binder_sort binder))
                 (Set.union (freevars initializer)
                            (Set.union (freevars length)
                                       (freevars_st body)))
@@ -157,7 +158,7 @@ let rec freevars_st (t:st_term)
       Set.union (Set.union (freevars name) (freevars_st body))
                 (freevars_opt 
                   (fun (b, r, is) ->
-                    (Set.union (freevars b.binder_ty) 
+                    (Set.union (freevars (binder_sort b)) 
                                (Set.union (freevars r)
                                           (freevars is))))
                   returns_inv)
@@ -266,7 +267,7 @@ let rec ln_st' (t:st_term) (i:int)
       ln' term i
       
     | Tm_Abs { b; ascription; body } ->
-      ln' b.binder_ty i &&
+      ln' (binder_sort b) i &&
       ln_st' body (i + 1) &&
       ln_ascription' ascription (i + 1)
 
@@ -275,12 +276,12 @@ let rec ln_st' (t:st_term) (i:int)
       ln' arg i
 
     | Tm_Bind { binder; head; body } ->
-      ln' binder.binder_ty i &&
+      ln' (binder_sort binder) i &&
       ln_st' head i &&
       ln_st' body (i + 1)
 
     | Tm_TotBind { binder; head; body } ->
-      ln' binder.binder_ty i &&
+      ln' (binder_sort binder) i &&
       ln' head i &&
       ln_st' body (i + 1)
 
@@ -317,12 +318,12 @@ let rec ln_st' (t:st_term) (i:int)
       ln' post2 (i + 1)
 
     | Tm_WithLocal { binder; initializer; body } ->
-      ln' binder.binder_ty i &&
+      ln' (binder_sort binder) i &&
       ln' initializer i &&
       ln_st' body (i + 1)
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      ln' binder.binder_ty i &&
+      ln' (binder_sort binder) i &&
       ln' initializer i &&
       ln' length i &&
       ln_st' body (i + 1)
@@ -348,7 +349,7 @@ let rec ln_st' (t:st_term) (i:int)
       ln_st' body i &&
       ln_opt'
         (fun (b, r, is) i ->
-          ln' b.binder_ty i &&
+          ln' (binder_sort b) i &&
           ln' r (i + 1) &&
           ln' is i)
         returns_inv i
@@ -429,10 +430,14 @@ let open_term_list' (t:list term) (v:term) (i:index)
   : Tot (list term) = subst_term_list t [ RT.DT i v ]
 
 let subst_binder b ss = 
-  {b with binder_ty=subst_term b.binder_ty ss}
+  let bv = R.inspect_binder b in
+  let bv = { bv with sort = subst_term bv.sort ss } in
+  R.pack_binder bv
 
 let open_binder b v i = 
-  {b with binder_ty=open_term' b.binder_ty v i}
+  let bv = R.inspect_binder b in
+  let bv = { bv with sort = open_term' bv.sort v i} in
+  R.pack_binder bv
 
 let rec subst_term_pairs (t:list (term & term)) (ss:subst)
   : Tot (list (term & term))
@@ -514,9 +519,8 @@ let rec subst_st_term (t:st_term) (ss:subst)
                   insert_eq;
                   term=subst_term term ss }
 
-    | Tm_Abs { b; q; ascription; body } ->
+    | Tm_Abs { b; ascription; body } ->
       Tm_Abs { b=subst_binder b ss;
-               q;
                ascription=subst_ascription ascription (shift_subst ss);
                body=subst_st_term body (shift_subst ss) }
 

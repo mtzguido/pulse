@@ -19,6 +19,7 @@ module R = FStar.Reflection.V2
 open Pulse.Syntax.Base
 open Pulse.Reflection.Util
 module RU = Pulse.RuntimeUtils
+module RT = FStar.Reflection.Typing
 module T = FStar.Tactics
 let debug_log (f: unit -> T.Tac unit) : T.Tac unit = if RU.debug_at_level_no_module "readback" then f()
 
@@ -66,7 +67,7 @@ let try_readback_st_comp (t:R.term)
                       snd pre == Q_Explicit      /\
                       snd post == Q_Explicit);
 
-              assume (t == mk_stt_comp u (fst res) (fst pre) (mk_abs (fst res) R.Q_Explicit body));
+              assume (t == mk_stt_comp u (fst res) (fst pre) (mk_abs (RT.mk_simple_binder RT.pp_name_default (fst res)) body));
               let res' = fst res in
               let pre' = fst pre in
               let post' = body in
@@ -87,7 +88,7 @@ let try_readback_st_comp (t:R.term)
               let opened' = fst opened in
               let pre' = fst pre in
               let post' = body in
-              assume (t == mk_stt_atomic_comp (fst obs) u (fst res) (fst opened) (fst pre) (mk_abs (fst res) R.Q_Explicit body));
+              assume (t == mk_stt_atomic_comp (fst obs) u (fst res) (fst opened) (fst pre) (mk_abs (RT.mk_simple_binder RT.pp_name_default (fst res)) body));
               let c = C_STAtomic opened' obs' ({u; res=res'; pre=pre';post=post'}) in
               Some (c <: c:Pulse.Syntax.Base.comp { elab_comp c == t })
             | _ -> None)
@@ -104,7 +105,7 @@ let try_readback_st_comp (t:R.term)
               let inames' = fst inames in
               let pre' = fst pre in
               let post' = body in
-              assume (t == mk_stt_ghost_comp u (fst res) inames' (fst pre) (mk_abs (fst res) R.Q_Explicit body));
+              assume (t == mk_stt_ghost_comp u (fst res) inames' (fst pre) (mk_abs (RT.mk_simple_binder RT.pp_name_default (fst res)) body));
               let c = C_STGhost inames' ({u; res=res'; pre=pre';post=post'}) in
               Some (c <: c:Pulse.Syntax.Base.comp { elab_comp c == t })
             | _ -> None)
