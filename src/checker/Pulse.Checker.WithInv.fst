@@ -275,7 +275,7 @@ let check0
       //
       let post_hint = Pulse.Checker.Base.intro_post_hint g
         (EffectAnnotAtomicOrGhost { opens })
-        (Some b.binder_ty)
+        (Some (binder_sort b))
         post in
       begin
         let g_x = push_binding g post_hint.x ppname_default post_hint.ret_ty in

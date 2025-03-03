@@ -40,16 +40,16 @@ let stt_slprop_equiv_closing (t0 t1:R.term) (x:var)
 let app0 t = R.mk_app t [bound_var 0, R.Q_Explicit]
 
 let abs_and_app0 (ty:R.term) (b:R.term) =
-    R.mk_app (mk_abs ty R.Q_Explicit b) [bound_var 0, R.Q_Explicit]
+    R.mk_app (mk_abs0 ty b) [bound_var 0, R.Q_Explicit]
 
 
 // x:ty -> slprop_equiv p q ~ x:ty -> slprop_equiv ((fun y -> p) x) ((fun y -> q) x)
 let stt_slprop_equiv_abstract (#g:stt_env) (#post0 #post1:term) (#pf:_) (#ty:_)
                              (d:RT.tot_typing (elab_env g) pf 
-                                  (mk_arrow (ty, R.Q_Explicit)
+                                  (mk_arrow0 ty
                                      (stt_slprop_equiv post0 post1)))
   : GTot (RT.tot_typing (elab_env g) pf
-            (mk_arrow (ty, R.Q_Explicit)
+            (mk_arrow0 ty
                       (stt_slprop_equiv (abs_and_app0 ty post0)
                                        (abs_and_app0 ty post1))))
   = admit()
@@ -58,11 +58,11 @@ let inst_intro_slprop_post_equiv (#g:R.env) (#ty:R.term) (#u:_)
                                 (d_ty:RT.tot_typing g ty (RT.tm_type u))
                                 (#post0 #post1:R.term)
                                 (d_0:RT.tot_typing g post0 
-                                       (mk_arrow (ty, R.Q_Explicit) tm_slprop))
+                                       (mk_arrow0 ty tm_slprop))
                                 (d_1:RT.tot_typing g post1 
-                                       (mk_arrow (ty, R.Q_Explicit) tm_slprop))
+                                       (mk_arrow0 ty tm_slprop))
                                 (#pf:_)
-                                (eq:RT.tot_typing g pf (mk_arrow (ty, R.Q_Explicit) 
+                                (eq:RT.tot_typing g pf (mk_arrow0 ty
                                       (stt_slprop_equiv (app0 post0) (app0 post1))))
   : GTot ( pf: R.term &
            RT.tot_typing g pf (stt_slprop_post_equiv u ty post0 post1) )
@@ -73,9 +73,9 @@ let stt_slprop_post_equiv_is_prop (#g:R.env) (#ty:R.term) (#u:_)
                                  (d_ty:RT.tot_typing g ty (RT.tm_type u))
                                  (#post0 #post1:R.term)
                                  (d_0:RT.tot_typing g post0 
-                                                (mk_arrow (ty, R.Q_Explicit) tm_slprop))
+                                                (mk_arrow0 ty tm_slprop))
                                  (d_1:RT.tot_typing g post1 
-                                                (mk_arrow (ty, R.Q_Explicit) tm_slprop))
+                                                (mk_arrow0 ty tm_slprop))
   : GTot (RT.tot_typing g (stt_slprop_post_equiv u ty post0 post1) RT.tm_prop)
   = admit()
 
@@ -83,8 +83,8 @@ let inst_sub_stt (#g:R.env) (#u:_) (#a #pre1 #pre2 #post1 #post2 #r:R.term)
                  (d_a: RT.tot_typing g a (RT.tm_type u))
                  (d_pre1: RT.tot_typing g pre1 tm_slprop)
                  (d_pre2: RT.tot_typing g pre2 tm_slprop)
-                 (d_post1:RT.tot_typing g post1 (mk_arrow (a, R.Q_Explicit) tm_slprop))
-                 (d_post2:RT.tot_typing g post2 (mk_arrow (a, R.Q_Explicit) tm_slprop))
+                 (d_post1:RT.tot_typing g post1 (mk_arrow0 a tm_slprop))
+                 (d_post2:RT.tot_typing g post2 (mk_arrow0 a tm_slprop))
                  (pre_equiv:RT.tot_typing g (`()) (stt_slprop_equiv pre1 pre2))
                  (post_equiv:RT.tot_typing g (`()) (stt_slprop_post_equiv u a post1 post2))
                  (d_r:RT.tot_typing g r (mk_stt_comp u a pre1 post1))
@@ -128,7 +128,7 @@ let st_equiv_soundness_aux (g:stt_env)
       RT.close_open_inverse (comp_post c1) x;
       let d 
         : RT.tot_typing (elab_env g) _ 
-                    (mk_arrow (t0, R.Q_Explicit)
+                    (mk_arrow0 t0
                               (stt_slprop_equiv (comp_post c0)
                                                (comp_post c1)))
           = assume (stt_slprop_equiv (comp_post c0)

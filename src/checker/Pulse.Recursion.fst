@@ -152,7 +152,7 @@ let add_knot (g : env) (rng : R.range)
       let last : FStar.Tactics.NamedView.binder = last in
       let last =
         (* add a refinement to last *)
-        let b' : simple_binder = {
+        let b' : T.simple_binder = {
           uniq = last.uniq;
           ppname = last.ppname;
           sort = last.sort;

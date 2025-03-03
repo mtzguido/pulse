@@ -22,6 +22,9 @@ module RT = FStar.Reflection.Typing
 module RU = Pulse.RuntimeUtils
 open FStar.List.Tot
 
+let null_binder (t:R.term) : R.binder =
+  RT.mk_simple_binder RT.pp_name_default t
+
 let u_two = RT.(u_succ (u_succ u_zero))
 let u_three = RT.(u_succ (u_succ (u_succ u_zero)))
 let u_four = RT.(u_succ (u_succ (u_succ (u_succ u_zero))))
@@ -222,11 +225,16 @@ let mk_abs (b:R.binder) (t:R.term) : R.term =
 
 (* Simple versions, just from a type *)
 let mk_arrow0 (ty:R.term) (cod : R.term) : R.term =
-  mk_arrow (RT.mk_simple_binder RT.pp_name_default ty) cod
+  mk_arrow (null_binder ty) cod
 let mk_ghost_arrow0 (ty:R.term) (cod : R.term) : R.term =
-  mk_ghost_arrow (RT.mk_simple_binder RT.pp_name_default ty) cod
+  mk_ghost_arrow (null_binder ty) cod
 let mk_abs0 (ty:R.term) (t:R.term) : R.term =
-  mk_abs (RT.mk_simple_binder RT.pp_name_default ty) t
+  mk_abs (null_binder ty) t
+
+let mk_arrow0_imp (ty:R.term) (cod : R.term) : R.term =
+  let b = null_binder ty in
+  let b = R.pack_binder { R.inspect_binder b with qual = R.Q_Implicit } in
+  mk_arrow b cod
 
 let mk_abs_with_range (r:Range.range) (b:R.binder) (t:R.term) : R.term =
   let b = RU.binder_set_range b r in

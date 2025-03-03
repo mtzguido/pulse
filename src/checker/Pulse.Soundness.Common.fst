@@ -71,17 +71,15 @@ let ghost_typing_soundness (#g:env)
 #push-options "--z3rlimit_factor 4"
 let mk_t_abs_tot (g:env)
                  (#u:universe)
-                 (#q:option qualifier)
-                 (#ty:term)
-                 (ppname:ppname)
-                 (t_typing:tot_typing g ty (tm_type u))
+                 (#b:binder)
+                 (t_typing:tot_typing g (binder_sort b) (tm_type u))
                  (#body:term)
                  (#body_ty:term)
                  (#x:var { None? (lookup g x) /\ ~(x `Set.mem` freevars body) })
-                 (body_typing:tot_typing (push_binding g x ppname ty) (open_term body x) body_ty)
+                 (body_typing:tot_typing (push_binding g x (binder_sppname b) (binder_sort b)) (open_term body x) body_ty)
   : GTot (RT.tot_typing (elab_env g)
-            (mk_abs_with_name ppname.name ty (elab_qual q) body)
-            (tm_arrow (mk_binder_ppname ty ppname) q (close_comp (C_Tot body_ty) x)))
+            (mk_abs b body)
+            (tm_arrow b (close_comp (C_Tot body_ty) x)))
   = let c = C_Tot body_ty in
     let r_body = open_term body x in
     let r_c = elab_comp c in
@@ -93,20 +91,25 @@ let mk_t_abs_tot (g:env)
     assert (~ (x `Set.mem` RT.freevars body));
     assume (~ (x `Set.mem` RT.freevars (RT.close_term r_body x)));
     RT.close_term_spec (elab_comp c) x;
-    let r_t_typing : RT.tot_typing (elab_env g) ty (RT.tm_type u)
+    let r_t_typing : RT.tot_typing (elab_env g) (binder_sort b) (RT.tm_type u)
       = coerce_eq () r_t_typing //strange that this coercion is needed
     in
+    assume (binder_attrs b == []);
+    // ^ FIXME: reflection typing does not provide a way to type
+    // an abstraction with attrs in the binder.
     let d : RT.tot_typing (elab_env g)
-              (mk_abs_with_name ppname.name ty (elab_qual q)
+              (mk_abs b
                  (RT.close_term (open_term body x) x))
-              (tm_arrow (mk_binder_ppname ty ppname) q (close_comp (C_Tot body_ty) x))
+              (tm_arrow b (close_comp (C_Tot body_ty) x))
           = 
     RT.T_Abs (elab_env g)
              x
-             ty
+             (binder_sort b)
              (RT.close_term r_body x)
              (T.E_Total, r_c)
-             u ppname.name (elab_qual q)
+             u
+             (binder_ppname b)
+             (binder_qual b)
              _
              r_t_typing
              r_body_typing
@@ -114,7 +117,7 @@ let mk_t_abs_tot (g:env)
     elab_open_commute' body (null_var x) 0;
     RT.open_term_spec body x;
     let d : RT.typing _
-                      (mk_abs_with_name ppname.name ty (elab_qual q)
+                      (mk_abs b
                               (RT.close_term (RT.open_term body x) x))
                       _
           = d 
@@ -125,36 +128,38 @@ let mk_t_abs_tot (g:env)
 
 let mk_t_abs (g:env)
              (#u:universe)
-             (#ty:term)
-             (#q:option qualifier)
-             (#t_typing:typing g ty T.E_Total (tm_type u))
+             (#b:binder)
+             (#t_typing:typing g (binder_sort b) T.E_Total (tm_type u))
              (ppname:ppname)
              (r_t_typing:RT.tot_typing (elab_env g)
-                                       ty
+                                       (binder_sort b)
                                        (elab_comp (C_Tot (tm_type u))))
              (#body:st_term)
              (#x:var { None? (lookup g x) /\ ~(x `Set.mem` freevars_st body) })
              (#c:comp)
-             (#body_typing:st_typing (push_binding g x ppname ty) (open_st_term body x) c)
-             (r_body_typing:RT.tot_typing (elab_env (push_binding g x ppname ty))
+             (#body_typing:st_typing (push_binding g x ppname (binder_sort b)) (open_st_term body x) c)
+             (r_body_typing:RT.tot_typing (elab_env (push_binding g x ppname (binder_sort b)))
                                           (elab_st_typing body_typing)
                                           (elab_comp c))
   : GTot (RT.tot_typing (elab_env g)
-            (mk_abs_with_name ppname.name ty (elab_qual q) (RT.close_term (elab_st_typing body_typing) x))
-            (tm_arrow (mk_binder_ppname ty ppname) q (close_comp c x)))
+            (mk_abs b (RT.close_term (elab_st_typing body_typing) x))
+            (tm_arrow b (close_comp c x)))
   = let r_body = elab_st_typing body_typing in
     let r_c = elab_comp c in
     RT.well_typed_terms_are_ln _ _ _ r_body_typing;
     RT.open_close_inverse r_body x;
     elab_comp_close_commute c x;      
     assume (~ (x `Set.mem` RT.freevars (RT.close_term r_body x)));
+    assume (binder_attrs b == []);
+    // ^ FIXME: reflection typing does not provide a way to type
+    // an abstraction with attrs in the binder.
     RT.close_term_spec (elab_comp c) x;
     RT.T_Abs (elab_env g)
              x
-             ty
+             (binder_sort b)
              (RT.close_term r_body x)
              (T.E_Total, r_c)
-             u ppname.name (elab_qual q)
+             u ppname.name (binder_qual b)
              _
              r_t_typing
              r_body_typing
@@ -169,31 +174,31 @@ let bind_res (u2:R.universe) (t2 pre post2:R.term) =
   mk_stt_comp u2 t2 pre post2
 
 let g_type_bind (u2:R.universe) (t1 t2 post1 post2:R.term) =
-    mk_arrow (t1, R.Q_Explicit)
+    mk_arrow0 t1
              (bind_res u2 t2 (R.mk_app post1 [bound_var 0 (* x *), R.Q_Explicit]) post2)
 
 let bind_type_t1_t2_pre_post1_post2_f (u1 u2:R.universe) (t1 t2 pre post1 post2:R.term) =
-  mk_arrow (g_type_bind u2 t1 t2 post1 post2, R.Q_Explicit)
+  mk_arrow0 (g_type_bind u2 t1 t2 post1 post2)
            (bind_res u2 t2 pre post2)
 
 let bind_type_t1_t2_pre_post1_post2 (u1 u2:R.universe) (t1 t2 pre post1 post2:R.term) =
   let f_type = mk_stt_comp u1 t1 pre post1 in
-  mk_arrow (f_type, R.Q_Explicit)
+  mk_arrow0 f_type
            (bind_type_t1_t2_pre_post1_post2_f u1 u2 t1 t2 pre post1 post2)
 
-let post2_type_bind t2 = mk_arrow (t2, R.Q_Explicit) slprop_tm
+let post2_type_bind t2 = mk_arrow0 t2 slprop_tm
 let bind_type_t1_t2_pre_post1 (u1 u2:R.universe) (t1 t2 pre post1:R.term) =
   let var = 0 in
   let post2 = mk_name var in
-  mk_arrow (post2_type_bind t2, R.Q_Implicit)
+  mk_arrow0_imp (post2_type_bind t2)
            (RT.subst_term (bind_type_t1_t2_pre_post1_post2 u1 u2 t1 t2 pre post1 post2)
                           [ RT.ND var 0 ])
 
-let post1_type_bind t1 = mk_arrow (t1, R.Q_Explicit) slprop_tm
+let post1_type_bind t1 = mk_arrow0 t1 slprop_tm
 let bind_type_t1_t2_pre (u1 u2:R.universe) (t1 t2 pre:R.term) =
   let var = 1 in
   let post1 = mk_name var in
-  mk_arrow (post1_type_bind t1, R.Q_Implicit)
+  mk_arrow0_imp (post1_type_bind t1)
            (RT.subst_term (bind_type_t1_t2_pre_post1 u1 u2 t1 t2 pre post1)
                           [ RT.ND var 0 ])
 
@@ -201,7 +206,7 @@ let bind_type_t1_t2 (u1 u2:R.universe) (t1 t2:R.term) =
   let var = 2 in
   let pre = mk_name var in
   let pre_type = slprop_tm in
-  mk_arrow (pre_type, R.Q_Implicit)
+  mk_arrow0_imp pre_type
            (RT.subst_term (bind_type_t1_t2_pre u1 u2 t1 t2 pre)
                           [ RT.ND var 0 ])
 
@@ -209,7 +214,7 @@ let bind_type_t1 (u1 u2:R.universe) (t1:R.term) =
   let var = 3 in
   let t2 = mk_name var in
   let t2_type = RT.tm_type u2 in
-  mk_arrow (t2_type, R.Q_Implicit)
+  mk_arrow0_imp t2_type
            (RT.subst_term (bind_type_t1_t2 u1 u2 t1 t2)
                           [ RT.ND var 0 ])
 
@@ -217,7 +222,7 @@ let bind_type (u1 u2:R.universe) =
   let var = 4 in
   let t1 = mk_name var in
   let t1_type = RT.tm_type u1 in
-  mk_arrow (t1_type, R.Q_Implicit)
+  mk_arrow0_imp t1_type
            (RT.subst_term (bind_type_t1 u1 u2 t1)
                           [ RT.ND var 0 ])
 
@@ -231,39 +236,39 @@ let mk_star (l r:R.term) =
 let frame_res (u:R.universe) (t pre post frame:R.term) =
     mk_stt_comp u t
                   (mk_star pre frame)
-                  (mk_abs t R.Q_Explicit (mk_star (R.mk_app post [bound_var 0, R.Q_Explicit]) frame))
+                  (mk_abs0 t (mk_star (R.mk_app post [bound_var 0, R.Q_Explicit]) frame))
 
 let frame_type_t_pre_post_frame (u:R.universe) (t pre post frame:R.term) =
   let open R in
   let f_type = mk_stt_comp u t pre post in
-  mk_arrow (f_type, Q_Explicit)
+  mk_arrow0 f_type
            (frame_res u t pre post frame)
 
 let frame_type_t_pre_post (u:R.universe) (t pre post:R.term) =
   let var = 0 in
   let frame = mk_name var in
-  mk_arrow (slprop_tm, R.Q_Explicit)
+  mk_arrow0 slprop_tm
            (RT.close_term (frame_res u t pre post frame) var)
 
 let frame_type_t_pre (u:R.universe) (t pre:R.term) =
   let var = 1 in
   let post = mk_name var in
-  let post_type = mk_arrow (t, R.Q_Explicit) slprop_tm in
-  mk_arrow (post_type, R.Q_Implicit)
+  let post_type = mk_arrow0 t slprop_tm in
+  mk_arrow0_imp post_type
            (RT.close_term (frame_type_t_pre_post u t pre post) var)
 
 let frame_type_t (u:R.universe) (t:R.term) =
   let var = 2 in
   let pre = mk_name var in
   let pre_type = slprop_tm in
-  mk_arrow (pre_type, R.Q_Implicit)
+  mk_arrow0_imp pre_type
            (RT.close_term (frame_type_t_pre u t pre) var)
 
 let frame_type (u:R.universe) =
   let var = 3 in
   let t = mk_name var in
   let t_type = RT.tm_type u in
-  mk_arrow (t_type, R.Q_Implicit)
+  mk_arrow0_imp t_type
            (RT.close_term (frame_type_t u t) var)
 
 
@@ -278,46 +283,46 @@ let stt_slprop_post_equiv (u:R.universe) (t t1 t2:R.term) =
 let sub_stt_res u t pre post = mk_stt_comp u t pre post
 
 let sub_stt_equiv_post u t pre1 post1 pre2 post2 = 
-  mk_arrow (stt_slprop_post_equiv u t post1 post2, R.Q_Explicit)
+  mk_arrow0 (stt_slprop_post_equiv u t post1 post2)
            (sub_stt_res u t pre2 post2)
 
 let sub_stt_equiv_pre u t pre1 post1 pre2 post2 = 
-  mk_arrow (stt_slprop_equiv pre1 pre2, R.Q_Explicit)
+  mk_arrow0 (stt_slprop_equiv pre1 pre2)
            (sub_stt_equiv_post u t pre1 pre2 post1 post2)
 
 let sub_stt_post2 u t pre1 post1 pre2 = 
   let var = 0 in
   let post2 = mk_name var in
-  let post2_type = mk_arrow (t, R.Q_Explicit) slprop_tm in
-  mk_arrow (post2_type, R.Q_Explicit)
+  let post2_type = mk_arrow0 t slprop_tm in
+  mk_arrow0 post2_type
            (RT.close_term (sub_stt_equiv_pre u t pre1 pre2 post1 post2) var)
 
 let sub_stt_pre2 u t pre1 post1 = 
   let var = 1 in
   let pre2 = mk_name var in
   let pre2_type = slprop_tm in
-  mk_arrow (pre2_type, R.Q_Explicit)
+  mk_arrow0 pre2_type
            (RT.close_term (sub_stt_post2 u t pre1 post1 pre2) var)
 
 let sub_stt_post1 u t pre1 = 
   let var = 2 in
   let post1 = mk_name var in
-  let post1_type = mk_arrow (t, R.Q_Explicit) slprop_tm in
-  mk_arrow (post1_type, R.Q_Explicit)
+  let post1_type = mk_arrow0 t slprop_tm in
+  mk_arrow0 post1_type
            (RT.close_term (sub_stt_pre2 u t pre1 post1) var)
 
 let sub_stt_pre1 u t = 
   let var = 3 in
   let pre1 = mk_name var in
   let pre1_type = slprop_tm in
-  mk_arrow (pre1_type, R.Q_Explicit)
+  mk_arrow0 pre1_type
            (RT.close_term (sub_stt_post1 u t pre1) var)
 
 let sub_stt_type u = 
   let var = 4 in
   let t = mk_name var in
   let ty_typ = RT.tm_type u in
-  mk_arrow (ty_typ, R.Q_Explicit)
+  mk_arrow0 ty_typ
            (RT.close_term (sub_stt_pre1 u t) var)
 
 (** Properties of environments suitable for elaboration **)
@@ -338,11 +343,11 @@ let check_top_level_environment (f:RT.fstar_top_env)
 let elab_comp_post (c:comp_st) : R.term =
   let t = comp_res c in
   let post = comp_post c in
-  mk_abs t R.Q_Explicit post
+  mk_abs0 t post
 
 let comp_post_type (c:comp_st) : R.term = 
   let t = comp_res c in
-  mk_arrow (t, R.Q_Explicit) slprop_tm
+  mk_arrow0 t slprop_tm
 
 assume
 val inversion_of_stt_typing (g:env) (c:comp_st)
@@ -360,7 +365,7 @@ val inversion_of_stt_typing (g:env) (c:comp_st)
           // _ |- (fun (x:t) -> post) : t -> slprop
           RT.tot_typing (elab_env g)
                         (elab_comp_post c)
-                        (tm_arrow (null_binder (comp_res c)) None (C_Tot tm_slprop))){ u == universe_of_comp c })
+                        (tm_arrow (null_binder (comp_res c)) (C_Tot tm_slprop))){ u == universe_of_comp c })
 
 let soundness_t (d:'a) = 
     g:stt_env ->

@@ -148,17 +148,20 @@ let rec close_open_inverse_st'  (t:st_term)
       close_open_inverse' p x i    
 
     | Tm_Abs { b; ascription; body } ->
-      close_open_inverse' b.binder_ty x i;
+      admit();
+      close_open_inverse_binder' b x i;
       close_open_inverse_st' body x (i + 1); 
       close_open_inverse_ascription' ascription x (i + 1)
 
     | Tm_Bind { binder; head; body } ->
-      close_open_inverse' binder.binder_ty x i;
+      admit();
+      close_open_inverse_binder' binder x i;
       close_open_inverse_st' head x i;
       close_open_inverse_st' body x (i + 1)
 
     | Tm_TotBind { binder; head; body } ->
-      close_open_inverse' binder.binder_ty x i;
+      admit();
+      close_open_inverse_binder' binder x i;
       close_open_inverse' head x i;
       close_open_inverse_st' body x (i + 1)
 
@@ -192,6 +195,7 @@ let rec close_open_inverse_st'  (t:st_term)
       ()
 
     | Tm_Par { pre1; body1; post1; pre2; body2; post2 } ->
+      admit();
       close_open_inverse' pre1 x i;
       close_open_inverse_st' body1 x i;
       close_open_inverse' post1 x (i + 1);
@@ -200,42 +204,62 @@ let rec close_open_inverse_st'  (t:st_term)
       close_open_inverse' post2 x (i + 1)
 
     | Tm_WithLocal { binder; initializer; body } ->
-      close_open_inverse' binder.binder_ty x i; 
+      admit();
+      close_open_inverse' (binder_sort binder) x i; 
       close_open_inverse' initializer x i;
       close_open_inverse_st' body x (i + 1)
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      close_open_inverse' binder.binder_ty x i; 
+      admit();
+      close_open_inverse' (binder_sort binder) x i; 
       close_open_inverse' initializer x i;
       close_open_inverse' length x i;
       close_open_inverse_st' body x (i + 1)
 
     | Tm_Rewrite { t1; t2; tac_opt } ->
+      admit();
       close_open_inverse' t1 x i;
       close_open_inverse' t2 x i;
       close_open_inverse_opt' tac_opt x i
 
     | Tm_Admit { typ; post } ->
+      admit();
       close_open_inverse' typ x i;
       close_open_inverse_opt' post x (i + 1)
 
     | Tm_Unreachable {c} ->
+      admit();
       close_open_inverse_comp' c x i
     
     | Tm_ProofHintWithBinders { binders; hint_type; t} ->
+      admit();
       let n = L.length binders in
       close_open_inverse_proof_hint_type' hint_type x (i + n);
       close_open_inverse_st' t x (i + n)
       
     | Tm_WithInv { name; body; returns_inv } ->
+      admit();
       close_open_inverse' name x i;
       close_open_inverse_st' body x i;
       match returns_inv with
       | None -> ()
       | Some (b, r, is) ->
-        close_open_inverse' b.binder_ty x i;
+        close_open_inverse' (binder_sort b) x i;
         close_open_inverse' r x (i + 1);
         close_open_inverse' is x i
+
+and close_open_inverse_binder' (b:binder)
+                            (x:var { ~(x `Set.mem` freevars_binder b) } )
+                            (i:index)
+  : Lemma (ensures close_binder' (open_binder' b (U.term_of_no_name_var x) i) x i == b)
+          (decreases b)
+  = admit()
+ 
+// let rec close_open_inverse_st'  (t:st_term) 
+//                                 (x:var { ~(x `Set.mem` freevars_st t) } )
+//                                 (i:index)
+//   : Lemma (ensures close_st_term' (open_st_term' t (U.term_of_no_name_var x) i) x i == t)
+//           (decreases t)
 #pop-options
 
 let close_open_inverse (t:term) (x:var { ~(x `Set.mem` freevars t) } )
@@ -305,7 +329,7 @@ let close_binders (bs:list binder) (xs:list var { L.length bs == L.length xs }) 
     match bs, xs with
     | [], [] -> L.rev out
     | b::bs, x::xs ->
-      let b = { b with binder_ty = subst_term b.binder_ty s } in
+      let b = subst_binder b s in
       let s = RT.ND x 0 :: shift_subst s in
       aux s (b::out) bs xs
   in

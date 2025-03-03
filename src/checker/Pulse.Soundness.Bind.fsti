@@ -33,7 +33,7 @@ val elab_bind_typing (g:stt_env)
                      (r1_typing: RT.tot_typing (elab_env g) r1 (elab_comp c1))
                      (r2:R.term)
                      (r2_typing: RT.tot_typing (elab_env g) r2 
-                                               (tm_arrow (null_binder (comp_res c1)) None (close_comp c2 x)))
+                                               (tm_arrow (null_binder (comp_res c1)) (close_comp c2 x)))
                      (bc:bind_comp g x c1 c2 c)
                      (t2_typing : RT.tot_typing (elab_env g) (comp_res c2) (RT.tm_type (comp_u c2)))
                      (post2_typing: RT.tot_typing (elab_env g) 

@@ -49,7 +49,7 @@ let rec refl_abs_binders (t:R.term) (acc:list binder) : T.Tac (list binder) =
   | Tv_Abs b body ->
     let {sort; ppname} = R.inspect_binder b in
     refl_abs_binders body
-     ((mk_binder_ppname sort (mk_ppname ppname (RU.range_of_term t)))::acc)
+     ((RT.mk_simple_binder ppname sort)::acc)
   | _ -> L.rev acc  
 
 let infer_binder_types (g:env) (bs:list binder) (v:slprop)
@@ -59,19 +59,9 @@ let infer_binder_types (g:env) (bs:list binder) (v:slprop)
   | _ ->
     let v_rng = Pulse.RuntimeUtils.range_of_term v in
     let g = push_context g "infer_binder_types" v_rng in
-    let as_binder (b:binder) : R.binder =
-      let open R in
-      let bv : binder_view = 
-        { sort = b.binder_ty;
-          ppname = b.binder_ppname.name;
-          qual = Q_Explicit;
-          attrs = [] } in
-      pack_binder bv
-    in
     let abstraction = 
       L.fold_right 
         (fun b (tv:term) -> 
-         let b = as_binder b in
          R.pack_ln (R.Tv_Abs b tv))
         bs
         v
@@ -86,15 +76,15 @@ let rec open_binders (g:env) (bs:list binder) (uvs:env { disjoint uvs g }) (v:te
   | [] -> (| uvs, v, body |)
   | b::bs ->
     // these binders are only lax checked so far
-    let _ = PC.check_universe (push_env g uvs) b.binder_ty in
+    let _ = PC.check_universe (push_env g uvs) (binder_sort b) in
     let x = fresh (push_env g uvs) in
-    let ss = [ RT.DT 0 (tm_var {nm_index=x;nm_ppname=b.binder_ppname}) ] in
+    let ss = [ RT.DT 0 (tm_var {nm_index=x;nm_ppname= binder_sppname b}) ] in
     let bs = L.mapi (fun i b ->
       assume (i >= 0);
       subst_binder b (shift_subst_n i ss)) bs in
     let v = subst_term v (shift_subst_n (L.length bs) ss) in
     let body = subst_st_term body (shift_subst_n (L.length bs) ss) in
-    open_binders g bs (push_binding uvs x b.binder_ppname b.binder_ty) v body
+    open_binders g bs (push_binding uvs x (binder_sppname b) (binder_sort b)) v body
 
 let closing (bs:list (ppname & var & typ)) : subst =
   L.fold_right (fun (_, x, _) (n, ss) ->
@@ -110,7 +100,7 @@ let rec close_binders (bs:list (ppname & var & typ))
     let bss = L.mapi (fun n (n1, x1, t1) ->
       assume (n >= 0);
       n1, x1, subst_term t1 [RT.ND x n]) bs in
-    let b = mk_binder_ppname t name in
+    let b = RT.mk_simple_binder name.name t in
     assume (L.length bss == L.length bs);
     b::(close_binders bss)
 
@@ -371,12 +361,12 @@ let rec add_rem_uvs (g:env) (t:typ) (uvs:env { Env.disjoint g uvs }) (v:slprop)
   : T.Tac (uvs:env { Env.disjoint g uvs } & slprop) =
   match is_arrow t with
   | None -> (| uvs, v |)
-  | Some (b, qopt, c) ->
+  | Some (b, c) ->
     let x = fresh (push_env g uvs) in
-    let ppname = ppname_for_uvar b.binder_ppname in
+    let ppname = ppname_for_uvar (binder_sppname b) in
     let ct = open_comp_nv c (ppname, x) in
-    let uvs = Env.push_binding uvs x ppname b.binder_ty in
-    let v = tm_pureapp v qopt (tm_var {nm_index = x; nm_ppname = ppname}) in
+    let uvs = Env.push_binding uvs x ppname (binder_sort b) in
+    let v = tm_pureapp v (aqualv_for_app (binder_qual b)) (tm_var {nm_index = x; nm_ppname = ppname}) in
     add_rem_uvs g (comp_res ct) uvs v
 
 let check

@@ -457,7 +457,7 @@ let maybe_weaken_branch_tags
       let checked_brs = T.map #_ #(cbr:check_branches_aux_t #g pre post_hint sc_u sc_ty sc {ctag_of_br cbr == ct}) (fun x -> x) checked_brs in
       (| ct, checked_brs |)
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 30"
 let check_branches
         (g:env)
         (pre:term)

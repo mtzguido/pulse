@@ -41,7 +41,7 @@ let elim_pure_head_ty =
     let squash_p = mk_squash u0 (RT.bound_var 0) in
     let pure_p = mk_pure (RT.bound_var 0) in
     let post =
-      mk_abs squash_p R.Q_Explicit (R.pack_ln (R.Tv_FVar (R.pack_fv emp_lid)))
+      mk_abs0 squash_p (R.pack_ln (R.Tv_FVar (R.pack_fv emp_lid)))
     in
     let cod = mk_stt_ghost_comp u0 squash_p tm_emp_inames pure_p post in
     mk_arrow

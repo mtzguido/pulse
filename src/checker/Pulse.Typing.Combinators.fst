@@ -35,16 +35,16 @@ val invert_forall_typing
         (d:tot_typing g (tm_forall_sl u b body) tm_slprop)
         (x:var { None? (lookup g x) /\ ~ (x `Set.mem` freevars body) })
   : GTot (
-    tot_typing g b.binder_ty (tm_type u) &
-    tot_typing (push_binding g x ppname_default b.binder_ty) (open_term body x) tm_slprop
+    tot_typing g (binder_sort b) (tm_type u) &
+    tot_typing (push_binding g x (binder_sppname b) (binder_sort b)) (open_term body x) tm_slprop
   )
 
 assume
 val construct_forall_typing
         (#g #u #b #body:_)
         (x:var { None? (lookup g x) /\ ~ (x `Set.mem` freevars body) })
-        (dt:tot_typing g b.binder_ty (tm_type u))
-        (db:tot_typing (push_binding g x ppname_default b.binder_ty) (open_term body x) tm_slprop)
+        (dt:tot_typing g (binder_sort b) (tm_type u))
+        (db:tot_typing (push_binding g x (binder_sppname b) (binder_sort b)) (open_term body x) tm_slprop)
   : GTot (tot_typing g (tm_forall_sl u b body) tm_slprop)
    
 

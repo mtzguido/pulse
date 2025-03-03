@@ -39,7 +39,7 @@ let return_soundness
                         (elab_comp c)) =
 
   let T_Return _ ctag use_eq u t e post x t_typing e_typing post_typing = d in
-  let rpost_abs = mk_abs t R.Q_Explicit post in
+  let rpost_abs = mk_abs0 t post in
   let rt_typing : RT.tot_typing _ t (R.pack_ln (R.Tv_Type u)) =
     tot_typing_soundness t_typing in
   let re_typing : RT.typing _ e (eff_of_ctag ctag, t) =
@@ -48,8 +48,10 @@ let return_soundness
     | _ -> tot_typing_soundness e_typing in
   let rpost_abs_typing
     : RT.tot_typing _ rpost_abs
-                      (mk_arrow (t, R.Q_Explicit) slprop_tm) =
-    mk_t_abs_tot g #_ #None ppname_default t_typing post_typing in
+                      (mk_arrow0 t slprop_tm) =
+    let b = RT.mk_simple_binder RT.pp_name_default t in
+    coerce_eq () <| // why ?
+    mk_t_abs_tot g #_ #b t_typing post_typing in
   
   let rx_tm = RT.var_as_term x in
   let elab_c_pre = RT.subst_term post [ RT.DT 0 e ] in
@@ -102,7 +104,7 @@ let return_soundness
                                    (tm_pure (mk_eq2 u t (null_var x) e)))
                           [ RT. ND x 0 ]);
     let elab_c_post =
-      mk_abs t R.Q_Explicit
+      mk_abs0 t
         (RT.subst_term
            (mk_star
               (RT.subst_term post [ RT.DT 0 rx_tm ])

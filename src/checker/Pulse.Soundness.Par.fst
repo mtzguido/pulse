@@ -47,9 +47,9 @@ let par_soundness
   let raL = comp_res cL in
   let raR = comp_res cR in
   let rpreL = comp_pre cL in
-  let rpostL = mk_abs raL R.Q_Explicit (comp_post cL) in
+  let rpostL = mk_abs0 raL (comp_post cL) in
   let rpreR = comp_pre cR in
-  let rpostR = mk_abs raR R.Q_Explicit (comp_post cR) in
+  let rpostR = mk_abs0 raR (comp_post cR) in
   let reL = elab_st_typing eL_typing in
   let reR = elab_st_typing eR_typing in
 
@@ -64,15 +64,17 @@ let par_soundness
   let (raL_typing, rpreL_typing, rpostL_typing)
     : (RT.tot_typing _ raL (R.pack_ln (R.Tv_Type uL)) &
        RT.tot_typing _ rpreL slprop_tm &
-       RT.tot_typing _ rpostL (mk_arrow (raL, R.Q_Explicit) slprop_tm)) =
+       RT.tot_typing _ rpostL (mk_arrow0 raL slprop_tm)) =
 
+    coerce_eq () <|
     inversion_of_stt_typing g cL (Comp.comp_typing_soundness g cL _ cL_typing) in
 
   let (raR_typing, rpreR_typing, rpostR_typing)
     : (RT.tot_typing _ raR (R.pack_ln (R.Tv_Type uR)) &
        RT.tot_typing _ rpreR slprop_tm &
-       RT.tot_typing _ rpostR (mk_arrow (raR, R.Q_Explicit) slprop_tm)) =
+       RT.tot_typing _ rpostR (mk_arrow0 raR slprop_tm)) =
 
+    coerce_eq () <|
     inversion_of_stt_typing g cR (Comp.comp_typing_soundness g cR _ cR_typing) in
 
   let aL = comp_res cL in
@@ -100,8 +102,8 @@ let par_soundness
 
   let post_eq
     : RT.equiv (elab_env g)
-               (mk_abs _ R.Q_Explicit _)
-               (mk_abs _ R.Q_Explicit _)
+               (mk_abs0 _ _)
+               (mk_abs0 _ _)
     = RT.equiv_abs_close _ _ x post_body_eq in
   assume (uL == uR); //TODO: we should simplify Par to remove the result type altogether
   let d = WT.par_typing x raL_typing raR_typing rpreL_typing rpostL_typing

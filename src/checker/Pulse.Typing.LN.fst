@@ -207,18 +207,18 @@ let rec open_st_term_ln' (e:st_term)
       open_term_ln' r x i
 
     | Tm_Abs { b; ascription=c; body } ->
-      open_term_ln' b.binder_ty x i;
+      open_binder_ln' b x i;
       map_opt_lemma_2 open_comp_ln' c.annotated x (i + 1);
       map_opt_lemma_2 open_comp_ln' c.elaborated x (i + 1);
       open_st_term_ln' body x (i + 1)
       
     | Tm_Bind { binder; head; body } ->
-      open_term_ln' binder.binder_ty x i;
+      open_binder_ln' binder x i;
       open_st_term_ln' head x i;
       open_st_term_ln' body x (i + 1)
    
     | Tm_TotBind { binder; head; body } ->
-      open_term_ln' binder.binder_ty x i;
+      open_binder_ln' binder x i;
       open_term_ln' head x i;
       open_st_term_ln' body x (i + 1)
       
@@ -263,12 +263,12 @@ let rec open_st_term_ln' (e:st_term)
       use it for elaboration, so it does not really matter. *)
 
     | Tm_WithLocal { binder; initializer; body } ->
-      open_term_ln' binder.binder_ty x i;
+      open_binder_ln' binder x i;
       open_term_ln' initializer x i;
       open_st_term_ln' body x (i + 1)
     
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      open_term_ln' binder.binder_ty x i;
+      open_binder_ln' binder x i;
       open_term_ln' initializer x i;
       open_term_ln' length x i;
       open_st_term_ln' body x (i + 1)
@@ -291,9 +291,26 @@ let rec open_st_term_ln' (e:st_term)
       match returns_inv with
       | None -> ()
       | Some (b, r, is) ->
-        open_term_ln' b.binder_ty x i;
+        open_binder_ln' b x i;
         open_term_ln' r x (i + 1);
         open_term_ln' is x i
+
+and open_binder_ln' (b:binder) (x:term) (i:index)
+  : Lemma
+    (requires RT.ln'_binder (open_binder b x i) (i - 1))
+    (ensures RT.ln'_binder b i)
+  = open_term_ln' (binder_sort b) x i;
+    open_aqual_ln' (binder_qual b) x i;
+    open_terms_ln' (binder_attrs b) x i;
+    admit()
+
+and open_aqual_ln' (aq:R.aqualv) (x:term) (i:index)
+  : Lemma
+    (requires RT.ln'_qual (open_aqual aq x i) (i - 1))
+    (ensures RT.ln'_qual aq i)
+  = match aq with
+    | R.Q_Meta t -> open_term_ln' t x i
+    | _ -> ()
 
 // The Tm_Match? and __brs_of conditions are to prove that the ln_branches' below
 // satisfies the termination refinment.
@@ -457,17 +474,17 @@ let rec ln_weakening_st (t:st_term) (i j:int)
       ln_weakening arg i j      
 
     | Tm_Bind { binder; head; body } ->
-      ln_weakening binder.binder_ty i j;
+      ln_weakening_binder binder i j;
       ln_weakening_st head i j;
       ln_weakening_st body (i + 1) (j + 1)
 
     | Tm_TotBind { binder; head; body } ->
-      ln_weakening binder.binder_ty i j;
+      ln_weakening_binder binder i j;
       ln_weakening head i j;
       ln_weakening_st body (i + 1) (j + 1)
 
     | Tm_Abs { b; ascription=c; body } ->
-      ln_weakening b.binder_ty i j;
+      ln_weakening_binder b i j;
       map_opt_lemma_2 ln_weakening_comp c.annotated (i + 1) (j + 1);
       map_opt_lemma_2 ln_weakening_comp c.elaborated (i + 1) (j + 1);
       ln_weakening_st body (i + 1) (j + 1)
@@ -511,9 +528,24 @@ let rec ln_weakening_st (t:st_term) (i j:int)
       match returns_inv with
       | None -> ()
       | Some (b, r, is) ->
-        ln_weakening b.binder_ty i j;
+        ln_weakening_binder b i j;
         ln_weakening r (i + 1) (j + 1);
         ln_weakening is i j
+
+and ln_weakening_binder (b:binder) (i j:int)
+  : Lemma
+    (requires ln'_binder b i /\ i <= j)
+    (ensures ln'_binder b j)
+  = ln_weakening (binder_sort b) i j;
+    ln_weakening_aqual (binder_qual b) i j
+
+and ln_weakening_aqual (aq:R.aqualv) (i j:int)
+  : Lemma
+    (requires ln'_qual aq i /\ i <= j)
+    (ensures ln'_qual aq j)
+  = match aq with
+    | R.Q_Meta t -> ln_weakening t i j
+    | _ -> ()
 
 assume
 val r_open_term_ln_inv' (e:R.term) (x:R.term { RT.ln x }) (i:index)
@@ -642,12 +674,12 @@ let rec open_term_ln_inv_st' (t:st_term)
       admit ()
 
     | Tm_Bind { binder; head; body } ->
-      open_term_ln_inv' binder.binder_ty x i;
+      open_term_ln_inv_binder' binder x i;
       open_term_ln_inv_st' head x i;
       open_term_ln_inv_st' body x (i + 1)
 
     | Tm_TotBind { binder; head; body } ->
-      open_term_ln_inv' binder.binder_ty x i;
+      open_term_ln_inv_binder' binder x i;
       open_term_ln_inv' head x i;
       open_term_ln_inv_st' body x (i + 1)
 
@@ -656,7 +688,7 @@ let rec open_term_ln_inv_st' (t:st_term)
       open_term_ln_inv' arg x i
 
     | Tm_Abs { b; ascription=c; body } ->
-      open_term_ln_inv' b.binder_ty x i;
+      open_term_ln_inv_binder' b x i;
       map_opt_lemma_2 open_comp_ln_inv' c.annotated x (i + 1);
       map_opt_lemma_2 open_comp_ln_inv' c.elaborated x (i + 1);
       open_term_ln_inv_st' body x (i + 1)
@@ -674,12 +706,12 @@ let rec open_term_ln_inv_st' (t:st_term)
       open_term_ln_inv' t2 x i
 
     | Tm_WithLocal { binder; initializer; body } ->
-      open_term_ln_inv' binder.binder_ty x i;
+      open_term_ln_inv_binder' binder x i;
       open_term_ln_inv' initializer x i;
       open_term_ln_inv_st' body x (i + 1)
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      open_term_ln_inv' binder.binder_ty x i;
+      open_term_ln_inv_binder' binder x i;
       open_term_ln_inv' initializer x i;
       open_term_ln_inv' length x i;
       open_term_ln_inv_st' body x (i + 1)
@@ -702,9 +734,25 @@ let rec open_term_ln_inv_st' (t:st_term)
       match returns_inv with
       | None -> ()
       | Some (b, r, is) ->
-        open_term_ln_inv' b.binder_ty x i;
+        open_term_ln_inv_binder' b x i;
         open_term_ln_inv' r x (i + 1);
         open_term_ln_inv' is x i
+
+and open_term_ln_inv_binder' (b:binder) (x:term { ln x }) (i:index)
+  : Lemma
+    (requires ln'_binder b i)
+    (ensures ln'_binder (open_binder b x i) (i - 1))
+  = open_term_ln_inv' (binder_sort b) x i;
+    open_term_ln_inv_aqual' (binder_qual b) x i
+
+and open_term_ln_inv_aqual' (aq:R.aqualv) (x:term { ln x }) (i:index)
+  : Lemma
+    (requires ln'_qual aq i)
+    (ensures ln'_qual (open_aqual aq x i) (i - 1))
+  = match aq with
+    | R.Q_Meta t -> open_term_ln_inv' t x i
+    | _ -> ()
+
 #pop-options
 
 assume
@@ -831,12 +879,12 @@ let rec close_st_term_ln' (t:st_term) (x:var) (i:index)
       admit ()
 
     | Tm_Bind { binder; head; body } ->
-      close_term_ln' binder.binder_ty x i;
+      close_term_ln'_binder binder x i;
       close_st_term_ln' head x i;
       close_st_term_ln' body x (i + 1)
 
     | Tm_TotBind { binder; head; body } ->
-      close_term_ln' binder.binder_ty x i;
+      close_term_ln'_binder binder x i;
       close_term_ln' head x i;
       close_st_term_ln' body x (i + 1)
 
@@ -845,7 +893,7 @@ let rec close_st_term_ln' (t:st_term) (x:var) (i:index)
       close_term_ln' arg x i
 
     | Tm_Abs { b; ascription=c; body } ->
-      close_term_ln' b.binder_ty x i;
+      close_term_ln'_binder b x i;
       map_opt_lemma_2 close_comp_ln' c.annotated x (i + 1);
       map_opt_lemma_2 close_comp_ln' c.elaborated x (i + 1);
       close_st_term_ln' body x (i + 1)
@@ -863,12 +911,12 @@ let rec close_st_term_ln' (t:st_term) (x:var) (i:index)
       close_term_ln' t2 x i
       
     | Tm_WithLocal { binder; initializer; body } ->
-      close_term_ln' binder.binder_ty x i;
+      close_term_ln'_binder binder x i;
       close_term_ln' initializer x i;
       close_st_term_ln' body x (i + 1)
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      close_term_ln' binder.binder_ty x i;
+      close_term_ln'_binder binder x i;
       close_term_ln' initializer x i;
       close_term_ln' length x i;
       close_st_term_ln' body x (i + 1)
@@ -891,9 +939,25 @@ let rec close_st_term_ln' (t:st_term) (x:var) (i:index)
       match returns_inv with
       | None -> ()
       | Some (ret_ty, returns_post, ret_is) ->
-        close_term_ln' ret_ty.binder_ty x i;
+        close_term_ln'_binder ret_ty x i;
         close_term_ln' returns_post x (i + 1);
         close_term_ln' ret_is x i
+
+and close_term_ln'_binder (b:binder) (x:var) (i:index)
+  : Lemma
+    (requires ln'_binder b (i - 1))
+    (ensures ln'_binder (close_binder b x i) i)
+  = close_term_ln' (binder_sort b) x i;
+    close_term_ln_aqual' (binder_qual b) x i
+
+and close_term_ln_aqual' (aq:R.aqualv) (x:var) (i:index)
+  : Lemma
+    (requires ln'_qual aq (i - 1))
+    (ensures ln'_qual (close_aqual aq x i) i)
+  = match aq with
+    | R.Q_Meta t -> close_term_ln' t x i
+    | _ -> ()
+
 #pop-options
 let close_comp_ln (c:comp) (v:var)
   : Lemma 
@@ -1055,13 +1119,17 @@ let ln_mk_array (t:term) (n:int)
       (ensures ln' (mk_array t) n) =
   admit ()
 
+let ln_qual q = ln'_qual q (-1)
+
 #push-options "--z3rlimit_factor 15 --fuel 4 --ifuel 1 --split_queries no"
 let rec st_typing_ln (#g:_) (#t:_) (#c:_)
                      (d:st_typing g t c)
   : Lemma 
     (ensures ln_st t /\ ln_c c)
     (decreases d)
-  = match d with
+  = let t0 = t in
+    let c0 = c in
+    match d with
     | T_Frame _ _ c frame df dc ->
       tot_or_ghost_typing_ln df;
       st_typing_ln dc;
@@ -1075,15 +1143,25 @@ let rec st_typing_ln (#g:_) (#t:_) (#c:_)
       assert (ln' p 0);
       assert (ln' (tm_pure p) 0)
 
-    | T_Abs _g x _q ty _u body c dt db ->
+    | T_Abs _g x b _u body c dt db ->
       tot_or_ghost_typing_ln dt;
       st_typing_ln db;
       open_st_term_ln body x;
       close_comp_ln c x;
-      Pulse.Elaborate.elab_ln_comp (close_comp c x) 0
+      Pulse.Elaborate.elab_ln_comp (close_comp c x) 0;
+      assume (RT.ln'_binder b (-1));
+      assume (ln' (elab_comp (close_comp c x)) 0);
+      assume (RT.ln'_comp (R.pack_comp <| R.C_Total <| elab_comp (close_comp c x)) 0);
+      assert (ln' (R.pack_ln
+                    (R.Tv_Arrow b
+                    (R.pack_comp <| R.C_Total <| elab_comp (close_comp c x)))) (-1));
+      assert (ln' (tm_arrow b (close_comp c x)) (-1));
+      assert (ln_c' c0 (-1));
+      assert (ln_c c0);
+      ()
 
-    | T_STApp _ _ _ _ res arg st at
-    | T_STGhostApp _ _ _ _ res arg _ st _ at ->
+    | T_STApp _ _ _ res arg st at
+    | T_STGhostApp _ _ _ res arg _ st _ at ->
       tot_or_ghost_typing_ln st;
       tot_or_ghost_typing_ln at;
       // We have RT.ln' (elab_comp res),
@@ -1113,14 +1191,16 @@ let rec st_typing_ln (#g:_) (#t:_) (#c:_)
         close_term_ln' e x 0
       end
 
-    | T_Bind _ _ e2 _ _ _ x _ d1 dc1 d2 bc ->
+    | T_Bind _ _ e2 _ _ b x _ d1 dc1 d2 bc ->
+      assume (ln_qual (binder_qual b));
       st_typing_ln d1;
       tot_or_ghost_typing_ln dc1;
       st_typing_ln d2;
       open_st_term_ln e2 x;
       bind_comp_ln bc
 
-    | T_BindFn _g _e1 e2 _c1 _c2 _b x d1 _u dc1 d2 c ->
+    | T_BindFn _g _e1 e2 _c1 _c2 b x d1 _u dc1 d2 c ->
+      assume (ln_qual (binder_qual b));
       st_typing_ln d1;
       tot_or_ghost_typing_ln dc1;
       st_typing_ln d2;
@@ -1133,8 +1213,8 @@ let rec st_typing_ln (#g:_) (#t:_) (#c:_)
       st_typing_ln d2
 
     | T_Match _ _ _ sc _ scd c _ _ _ _ ->
-      tot_or_ghost_typing_ln scd;
-      admit ()
+      admit() ; // ??
+      tot_or_ghost_typing_ln scd
 
     | T_ElimExists _ u t p x dt dv ->
       tot_or_ghost_typing_ln dt;
@@ -1162,6 +1242,7 @@ let rec st_typing_ln (#g:_) (#t:_) (#c:_)
       open_term_ln_inv' inv tm_false 0
 
     | T_Par _ _ cL _ cR x _ _ eL_typing eR_typing ->
+      admit (); // ??
       let x_tm = term_of_no_name_var x in
       let u = comp_u cL in
       let aL = comp_res cL in

@@ -43,7 +43,7 @@ let inst_frame_pre #u #g #head #t
 let inst_frame_post #u #g #head #t #pre
                     (head_typing: RT.tot_typing g head (frame_type_t_pre u t pre))
                     (#post:_)
-                    (post_typing: RT.tot_typing g post (mk_arrow (t, R.Q_Explicit) slprop_tm))
+                    (post_typing: RT.tot_typing g post (mk_arrow0 t slprop_tm))
   : GTot (RT.tot_typing g (R.mk_app head [(post, R.Q_Implicit)])
                           (frame_type_t_pre_post u t pre post))
   = admit()
@@ -72,9 +72,9 @@ let equiv_frame_post (g:R.env)
                      (pre:R.term) 
                      (post:term) // ln 1
                      (frame:R.term) //ln 0
-  : GTot (RT.equiv g (mk_stt_comp u t pre (mk_abs t R.Q_Explicit (mk_star (R.mk_app (mk_abs t R.Q_Explicit post)
+  : GTot (RT.equiv g (mk_stt_comp u t pre (mk_abs0 t (mk_star (R.mk_app (mk_abs0 t post)
                                                                            [bound_var 0, R.Q_Explicit]) frame)))
-                     (mk_stt_comp u t pre (mk_abs t R.Q_Explicit (mk_star post frame))))
+                     (mk_stt_comp u t pre (mk_abs0 t (mk_star post frame))))
   = admit()
 
 #push-options "--z3rlimit_factor 4 --ifuel 1 --fuel 4"
@@ -110,7 +110,7 @@ let elab_frame_typing (g:stt_env)
                 (inst_frame_pre 
                   (inst_frame_t head_typing t_typing)
                  pre_typing)
-             post_typing)
+             (coerce_eq () post_typing))
            frame_typing)
           e_typing
     in

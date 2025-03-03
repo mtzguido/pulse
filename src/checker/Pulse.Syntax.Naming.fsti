@@ -47,6 +47,11 @@ let freevars_opt (f: 'a -> Set.set var) (x:option 'a) : Set.set var =
   | None -> Set.empty
   | Some x -> f x
 
+let freevars_opt_dec (o:option 'a) (f: (x:'a{x << o}) -> Set.set var) : Set.set var =
+  match o with
+  | None -> Set.empty
+  | Some x -> f x
+
 let freevars_term_opt (t:option term) : Set.set var =
   freevars_opt freevars t
 
@@ -85,19 +90,19 @@ let rec freevars_st (t:st_term)
     | Tm_Return { expected_type; term } ->
       Set.union (freevars expected_type) (freevars term)
     | Tm_Abs { b; ascription; body } ->
-      Set.union (freevars (binder_sort b)) 
+      Set.union (freevars_binder b)
                 (Set.union (freevars_st body)
                            (freevars_ascription ascription))
     | Tm_STApp { head; arg } ->
       Set.union (freevars head) (freevars arg)
     | Tm_Bind { binder; head; body } ->
       Set.union 
-        (Set.union (freevars (binder_sort binder)) 
+        (Set.union (freevars_binder binder)
                    (freevars_st head))
         (freevars_st body)
     | Tm_TotBind { binder; head; body } ->
       Set.union
-        (Set.union (freevars (binder_sort binder))
+        (Set.union (freevars_binder binder)
                    (freevars head))
         (freevars_st body)
     | Tm_If { b; then_; else_; post } ->
@@ -129,12 +134,12 @@ let rec freevars_st (t:st_term)
                               (freevars post2)))
 
     | Tm_WithLocal { binder; initializer; body } ->
-      Set.union (freevars (binder_sort binder))
+      Set.union (freevars_binder binder)
                 (Set.union (freevars initializer)
                            (freevars_st body))
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      Set.union (freevars (binder_sort binder))
+      Set.union (freevars_binder binder)
                 (Set.union (freevars initializer)
                            (Set.union (freevars length)
                                       (freevars_st body)))
@@ -156,12 +161,23 @@ let rec freevars_st (t:st_term)
 
     | Tm_WithInv { name; body; returns_inv } ->
       Set.union (Set.union (freevars name) (freevars_st body))
-                (freevars_opt 
+                (freevars_opt_dec
+                  returns_inv
                   (fun (b, r, is) ->
-                    (Set.union (freevars (binder_sort b)) 
+                    (Set.union (freevars_binder b)
                                (Set.union (freevars r)
                                           (freevars is))))
-                  returns_inv)
+                  )
+
+and freevars_binder (b:binder) : Set.set var =
+  freevars (binder_sort b) `Set.union`
+  freevars_aqual (binder_qual b) `Set.union`
+  freevars_list (binder_attrs b)
+
+and freevars_aqual (a:R.aqualv) : Set.set var =
+  match a with
+  | R.Q_Meta t -> freevars t
+  | _ -> Set.empty
 
 and freevars_branches (t:list branch) : Set.set var =
   match t with
@@ -267,7 +283,7 @@ let rec ln_st' (t:st_term) (i:int)
       ln' term i
       
     | Tm_Abs { b; ascription; body } ->
-      ln' (binder_sort b) i &&
+      RT.ln'_binder b i &&
       ln_st' body (i + 1) &&
       ln_ascription' ascription (i + 1)
 
@@ -276,12 +292,12 @@ let rec ln_st' (t:st_term) (i:int)
       ln' arg i
 
     | Tm_Bind { binder; head; body } ->
-      ln' (binder_sort binder) i &&
+      RT.ln'_binder binder i &&
       ln_st' head i &&
       ln_st' body (i + 1)
 
     | Tm_TotBind { binder; head; body } ->
-      ln' (binder_sort binder) i &&
+      RT.ln'_binder binder i &&
       ln' head i &&
       ln_st' body (i + 1)
 
@@ -318,12 +334,12 @@ let rec ln_st' (t:st_term) (i:int)
       ln' post2 (i + 1)
 
     | Tm_WithLocal { binder; initializer; body } ->
-      ln' (binder_sort binder) i &&
+      RT.ln'_binder binder i &&
       ln' initializer i &&
       ln_st' body (i + 1)
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      ln' (binder_sort binder) i &&
+      RT.ln'_binder binder i &&
       ln' initializer i &&
       ln' length i &&
       ln_st' body (i + 1)
@@ -348,6 +364,7 @@ let rec ln_st' (t:st_term) (i:int)
       ln' name i &&
       ln_st' body i &&
       ln_opt'
+        #(simple_binder & term & term)
         (fun (b, r, is) i ->
           ln' (binder_sort b) i &&
           ln' r (i + 1) &&
@@ -380,8 +397,24 @@ val subst_host_term (t:term) (ss:subst)
 
 let subst_term (t:term) (ss:subst) : term = subst_host_term t ss
 
+let subst_aqual a ss =
+  match a with
+  | R.Q_Meta t -> R.Q_Meta (subst_term t ss)
+  | _ -> a
+
+let subst_binder b ss = 
+  let bv = R.inspect_binder b in
+  let bv = { bv with
+    sort = subst_term bv.sort ss;
+    qual = subst_aqual bv.qual ss;
+  } in
+  R.pack_binder bv
+
 let open_term' (t:term) (v:term) (i:index) =
   subst_term t [ RT.DT i v ]
+
+let open_binder' (b:binder) (v:term) (i:index) =
+  subst_binder b [ RT.DT i v]
 
 let subst_st_comp (s:st_comp) (ss:subst)
  : st_comp =
@@ -429,14 +462,17 @@ let rec subst_term_list (t:list term) (ss:subst)
 let open_term_list' (t:list term) (v:term) (i:index)
   : Tot (list term) = subst_term_list t [ RT.DT i v ]
 
-let subst_binder b ss = 
-  let bv = R.inspect_binder b in
-  let bv = { bv with sort = subst_term bv.sort ss } in
-  R.pack_binder bv
+let open_aqual a v i =
+  match a with
+  | R.Q_Meta t -> R.Q_Meta (open_term' t v i)
+  | _ -> a
 
 let open_binder b v i = 
   let bv = R.inspect_binder b in
-  let bv = { bv with sort = open_term' bv.sort v i} in
+  let bv = { bv with
+    sort = open_term' bv.sort v i;
+    qual = open_aqual bv.qual v i;
+  } in
   R.pack_binder bv
 
 let rec subst_term_pairs (t:list (term & term)) (ss:subst)
@@ -669,12 +705,17 @@ let close_term_opt' (t:option term) (v:var) (i:index) : option term =
 let close_term_list' (t:list term) (v:var) (i:index) : list term =
   subst_term_list t [ RT.ND v i ]
 
-let close_binder b v i =
+let close_aqual a v i =
+  match a with
+  | R.Q_Meta t -> R.Q_Meta (close_term' t v i)
+  | _ -> a
+
+let close_binder' b v i =
   subst_binder b [ RT.ND v i ]
-             
+
 let close_st_term' (t:st_term) (v:var) (i:index) : st_term =
   subst_st_term t [ RT.ND v i ]
-      
+
 let close_term t v = close_term' t v 0
 let close_st_term t v = close_st_term' t v 0
 let close_comp t v = close_comp' t v 0

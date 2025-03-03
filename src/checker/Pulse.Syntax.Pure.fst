@@ -251,8 +251,8 @@ type term_view =
   | Tm_Emp        : term_view
   | Tm_Pure       : p:term -> term_view
   | Tm_Star       : l:slprop -> r:slprop -> term_view
-  | Tm_ExistsSL   : u:universe -> b:binder -> body:slprop -> term_view
-  | Tm_ForallSL   : u:universe -> b:binder -> body:slprop -> term_view
+  | Tm_ExistsSL   : u:universe -> b:simple_binder -> body:slprop -> term_view
+  | Tm_ForallSL   : u:universe -> b:simple_binder -> body:slprop -> term_view
   | Tm_SLProp     : term_view
   | Tm_Inv        : iname:term -> p:slprop -> term_view
   | Tm_Inames     : term_view  // type inames
@@ -315,10 +315,10 @@ let tm_pure (p:term) : term = pack_term_view (Tm_Pure p) (range_of_term p)
 let tm_star (l:slprop) (r:slprop) : term =
   pack_term_view (Tm_Star l r)
                  (union_ranges (range_of_term l) (range_of_term r))
-let tm_exists_sl (u:universe) (b:binder) (body:slprop) : term =
+let tm_exists_sl (u:universe) (b:simple_binder) (body:slprop) : term =
   pack_term_view (Tm_ExistsSL u b body)
                  (union_ranges (range_of_term (binder_sort b)) (range_of_term body))
-let tm_forall_sl (u:universe) (b:binder) (body:slprop) : term =
+let tm_forall_sl (u:universe) (b:simple_binder) (body:slprop) : term =
   pack_term_view (Tm_ForallSL u b body)
                  (union_ranges (range_of_term (binder_sort b)) (range_of_term body))
 let tm_iname = tm_fvar (as_fv iname_lid)

@@ -126,7 +126,7 @@ val continuation_elaborator_with_bind_fn (#g:env) (#ctxt:term)
   (ctxt_typing:tot_typing g ctxt tm_slprop)
   (#e1:st_term)
   (#c1:comp { C_Tot? c1 })
-  (b:binder{b.binder_ty == comp_res c1})
+  (b:binder{binder_sort b == comp_res c1})
   (e1_typing:st_typing g e1 c1)
   (x:nvar { None? (lookup g (snd x)) })
 : T.Tac (continuation_elaborator

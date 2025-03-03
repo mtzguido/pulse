@@ -42,7 +42,7 @@ let while_soundness
                         (elab_comp c)) =
 
   let T_While _ inv cond body inv_typing cond_typing body_typing = d in
-  let rinv = mk_abs bool_tm R.Q_Explicit inv in
+  let rinv = mk_abs0 bool_tm inv in
   let rinv_typing
     : RT.tot_typing _
         (mk_exists uzero bool_tm rinv)
@@ -51,7 +51,7 @@ let while_soundness
   let rinv_typing
     : RT.tot_typing _
         rinv
-        (mk_arrow (bool_tm, R.Q_Explicit) slprop_tm) =
+        (mk_arrow0 bool_tm slprop_tm) =
     WT.exists_inversion rinv_typing in
   let rcond_typing
     : RT.tot_typing _ (elab_st_typing cond_typing)
@@ -64,7 +64,7 @@ let while_soundness
     : RT.tot_typing _ (elab_st_typing body_typing)
         (mk_stt_comp uzero unit_tm
            (R.pack_ln (R.Tv_App rinv (true_tm, R.Q_Explicit)))
-           (mk_abs unit_tm R.Q_Explicit (mk_exists uzero bool_tm rinv))) =
+           (mk_abs0 unit_tm (mk_exists uzero bool_tm rinv))) =
     
     let d = soundness g body (comp_while_body ppname_default inv) body_typing in
     let pre_eq : RT.equiv (elab_env g)
@@ -83,7 +83,7 @@ let while_soundness
 
   let post_eq : RT.equiv (elab_env g)
     (RT.mk_abs unit_tm R.Q_Explicit
-       (R.pack_ln (R.Tv_App (mk_abs bool_tm R.Q_Explicit inv) (false_tm, R.Q_Explicit))))
+       (R.pack_ln (R.Tv_App (mk_abs0 bool_tm inv) (false_tm, R.Q_Explicit))))
     (RT.mk_abs unit_tm R.Q_Explicit
        (RT.subst_term inv [ RT.DT 0 false_tm ]))
     = RU.magic () in

@@ -59,7 +59,7 @@ let with_local_array_pre_typing (#g:env) (#pre:term)
 
 let is_annotated_type_array (t:term) : option term =
   match is_pure_app t with
-  | Some (head, None, a) ->
+  | Some (head, FStar.Reflection.V2.Q_Explicit, a) ->
     (match is_fvar head with
      | Some (l, _) ->
        if l = RU.array_lid
@@ -102,7 +102,7 @@ let check
     let Tm_WithLocalArray {binder; initializer; length; body} = t.term in
     let (| init, init_u, init_t, init_t_typing, init_typing |) =
       (* Check against annotation if any *)
-      let ty = binder.binder_ty in
+      let ty = binder_sort binder in
       match inspect_term ty with
       | Tm_Unknown -> compute_tot_term_type_and_u g initializer
       | _ ->
@@ -132,15 +132,15 @@ let check
     )
     else
       let x = fresh g in
-      let px = binder.binder_ppname, x in
+      let px = binder_sppname binder, x in
       if x `Set.mem` freevars_st body
       then fail g
                 (Some body.range)
                 (Printf.sprintf "withlocalarray: %s is free in body"
-                  (T.unseal binder.binder_ppname.name))
+                  (T.unseal (binder_ppname binder)))
       else
         let x_tm = term_of_nvar px in
-        let g_extended = push_binding g x binder.binder_ppname (mk_array init_t) in
+        let g_extended = push_binding g x (binder_sppname binder) (mk_array init_t) in
         let body_pre = comp_withlocal_array_body_pre pre init_t x_tm init len in
         let body_pre_typing =
           with_local_array_pre_typing pre_typing init_t init len init_typing len_typing x in
@@ -154,8 +154,8 @@ let check
           let body_post = extend_post_hint g post init_t x in
           let (| opened_body, c_body, body_typing |) =
             let r =
-              check g_extended body_pre body_pre_typing (Some body_post) binder.binder_ppname (open_st_term_nv body px) in
-            apply_checker_result_k r binder.binder_ppname in
+              check g_extended body_pre body_pre_typing (Some body_post) (binder_sppname binder) (open_st_term_nv body px) in
+            apply_checker_result_k r (binder_sppname binder) in
           let body = close_st_term opened_body x in
           assume (open_st_term (close_st_term opened_body x) x == opened_body);
           let c = C_ST {u=comp_u c_body;res=comp_res c_body;pre;post=post.post} in
@@ -166,7 +166,7 @@ let check
               post_typing_rec.ty_typing
               x post_typing_rec.post_typing
           in
-          let d = T_WithLocalArray g binder.binder_ppname init len body init_t c x
+          let d = T_WithLocalArray g (binder_sppname binder) init len body init_t c x
             init_typing
             len_typing
             init_t_typing

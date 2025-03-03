@@ -43,20 +43,37 @@ module Sub = Pulse.Soundness.Sub
 module RU = Pulse.RuntimeUtils
 module Typing = Pulse.Typing
 
+(* This is the type of Pulse.Soundness.Common.mk_t_abs *)
 let tabs_t (d:'a) = 
     #g:stt_env ->
     #u:universe ->
-    #ty:term ->
-    q:option qualifier ->
+    #b:binder ->
     ppname:ppname ->
-    t_typing:tot_typing g ty (tm_type u) { t_typing << d } ->
+    (#t_typing:typing g (binder_sort b) T.E_Total (tm_type u))
     #body:st_term ->
     #x:var { None? (lookup g x) /\ ~(x `Set.mem` freevars_st body) } ->
     #c:comp ->
     body_typing:st_typing (push_binding g x ppname ty) (open_st_term body x) c { body_typing << d } ->
     GTot (RT.tot_typing (elab_env g)
-            (mk_abs_with_name ppname.name ty (elab_qual q) (RT.close_term (elab_st_typing body_typing) x))
-            (tm_arrow (mk_binder_ppname ty ppname) q (close_comp c x)))
+            (mk_abs b (RT.close_term (elab_st_typing body_typing) x))
+            (tm_arrow b (close_comp c x)))
+
+let mk_t_abs (g:env)
+             (#u:universe)
+             (#b:binder)
+             (#t_typing:typing g (binder_sort b) T.E_Total (tm_type u))
+             (ppname:ppname)
+             (r_t_typing:RT.tot_typing (elab_env g)
+                                       (binder_sort b)
+                                       (elab_comp (C_Tot (tm_type u))))
+             (#body:st_term)
+             (#x:var { None? (lookup g x) /\ ~(x `Set.mem` freevars_st body) })
+             (#c:comp)
+             (#body_typing:st_typing (push_binding g x ppname (binder_sort b)) (open_st_term body x) c)
+             (r_body_typing:RT.tot_typing (elab_env (push_binding g x ppname (binder_sort b)))
+                                          (elab_st_typing body_typing)
+                                          (elab_comp c))
+
 
 #push-options "--z3rlimit_factor 4 --split_queries no"
 let lift_soundness

@@ -211,7 +211,7 @@ type slprop_equiv : env -> term -> term -> Type =
      g:env ->
      x:var { None? (lookup g x) } ->
      u:universe ->
-     b:binder ->
+     b:simple_binder ->
      t0:term { ~(x `Set.mem` freevars t0 ) } ->
      t1:term { ~(x `Set.mem` freevars t1 ) } ->
      slprop_equiv (push_binding g x ppname_default (binder_sort b)) (open_term t0 x) (open_term t1 x) ->
@@ -337,7 +337,7 @@ let comp_intro_pure (p:term) =
 
 let named_binder (x:ppname) (t:term) = RT.mk_simple_binder x.name t
 
-let comp_intro_exists (u:universe) (b:binder) (p:term) (e:term)
+let comp_intro_exists (u:universe) (b:simple_binder) (p:term) (e:term)
   : comp
   = C_STGhost tm_emp_inames
       {
@@ -347,7 +347,7 @@ let comp_intro_exists (u:universe) (b:binder) (p:term) (e:term)
         post=tm_exists_sl u b p
       }
 
-let comp_intro_exists_erased (u:universe) (b:binder) (p:term) (e:term)
+let comp_intro_exists_erased (u:universe) (b:simple_binder) (p:term) (e:term)
   : comp
   = C_STGhost tm_emp_inames
       {
@@ -760,11 +760,10 @@ type st_typing : env -> st_term -> comp -> Type =
   | T_Abs: 
       g:env ->
       x:var { None? (lookup g x) } ->
-      b:binder ->
-      u:universe ->
+      b:binder  ->
       body:st_term {~ (x `Set.mem` freevars_st body) } ->
       c:comp ->
-      tot_typing g (binder_sort b) (tm_type u) ->
+      binder_typing g b (tm_type u) ->
       st_typing (push_binding g x ppname_default (binder_sort b)) (open_st_term_nv body (binder_sppname b, x)) c ->
       st_typing g (wtag None (Tm_Abs { b; body; ascription=empty_ascription}))
                   (C_Tot (tm_arrow b (close_comp c x)))
@@ -939,7 +938,7 @@ type st_typing : env -> st_term -> comp -> Type =
   | T_IntroExists:
       g:env ->
       u:universe ->
-      b:binder ->
+      b:simple_binder ->
       p:term ->
       e:term ->
       tot_typing g (binder_sort b) (tm_type u) ->

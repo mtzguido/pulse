@@ -37,7 +37,7 @@ val stc_soundness
                         st.pre
                         slprop_tm &
           RT.tot_typing (elab_env g)
-                        (mk_abs st.res R.Q_Explicit st.post)
+                        (mk_abs0 st.res st.post)
                         (post1_type_bind st.res))
 
 val comp_typing_soundness (g:stt_env)

@@ -39,7 +39,9 @@ let mk (#g:env) (#v:slprop) (v_typing:tot_typing g v tm_slprop)
                    st_typing g t c)) =
 
   match inspect_term v with
-  | Tm_ExistsSL u { binder_ppname=nm; binder_ty = t } p ->
+  | Tm_ExistsSL u b p ->
+    let nm = binder_sppname b in
+    let t = binder_sort b in
     let x = fresh g in
     let c = Pulse.Typing.comp_elim_exists u t p (nm, x) in
     let tm_typing : st_typing g _ c =

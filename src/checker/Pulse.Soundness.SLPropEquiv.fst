@@ -33,7 +33,7 @@ open Pulse.Checker.SLPropEquiv
 let slprop_equiv_refl_type = 
   let var = 0 in
   let v = mk_name var in
-  mk_arrow (tm_slprop, R.Q_Explicit)
+  mk_arrow0 tm_slprop
            (RT.close_term (stt_slprop_equiv v v) var)
 
 let inst_slprop_equiv_refl #g #v

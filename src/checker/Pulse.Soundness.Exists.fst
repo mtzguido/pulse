@@ -40,17 +40,17 @@ let intro_exists_soundness
 
   let t0 = t in
   let T_IntroExists _ u b p e t_typing p_typing e_typing = d in
-  let rt = b.binder_ty in
+  let rt = binder_sort b in
   let rt_typing : RT.tot_typing _ rt (R.pack_ln (R.Tv_Type u)) =
       tot_typing_soundness t_typing in
   let rp_typing
       : RT.tot_typing _
-          (mk_exists u rt (mk_abs rt R.Q_Explicit p)) slprop_tm =
+          (mk_exists u rt (mk_abs0 rt p)) slprop_tm =
       tot_typing_soundness p_typing in
   let rp_typing
       : RT.tot_typing _
-          (mk_abs rt R.Q_Explicit p)
-          (mk_arrow (rt, R.Q_Explicit) slprop_tm) =
+          (mk_abs0 rt p)
+          (mk_arrow0 rt slprop_tm) =
         WT.exists_inversion rp_typing
   in
   let re_typing : RT.ghost_typing _ e _ =
@@ -81,7 +81,7 @@ let elim_exists_soundness
   let rp_typing
     : RT.tot_typing (elab_env g)
                     (mk_exists u t
-                       (mk_abs t R.Q_Explicit p))
+                       (mk_abs0 t p))
                 slprop_tm
     = tot_typing_soundness p_typing in
   let rp_typing = WT.exists_inversion rp_typing in

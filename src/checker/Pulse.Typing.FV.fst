@@ -131,7 +131,7 @@ let rec freevars_close_st_term' (t:st_term) (x:var) (i:index)
       freevars_close_term' arg x i
     
     | Tm_Abs { b; ascription=c; body } ->
-      freevars_close_term' b.binder_ty x i;
+      freevars_close_binder' b x i;
       (
         match c.annotated with
         | None -> ()
@@ -147,12 +147,12 @@ let rec freevars_close_st_term' (t:st_term) (x:var) (i:index)
       freevars_close_st_term' body x (i + 1)
 
     | Tm_Bind { binder; head; body } ->
-      freevars_close_term' binder.binder_ty x i;
+      freevars_close_binder' binder x i;
       freevars_close_st_term' head x i;
       freevars_close_st_term' body x (i + 1)
 
     | Tm_TotBind { binder; head; body } ->
-      freevars_close_term' binder.binder_ty x i;
+      freevars_close_binder' binder x i;
       freevars_close_term' head x i;
       freevars_close_st_term' body x (i + 1)
       
@@ -192,12 +192,12 @@ let rec freevars_close_st_term' (t:st_term) (x:var) (i:index)
       freevars_close_term_opt' tac_opt x i
 
     | Tm_WithLocal { binder; initializer; body } ->
-      freevars_close_term' binder.binder_ty x i;
+      freevars_close_binder' binder x i;
       freevars_close_term' initializer x i;
       freevars_close_st_term' body x (i + 1)
 
     | Tm_WithLocalArray { binder; initializer; length; body } ->
-      freevars_close_term' binder.binder_ty x i;
+      freevars_close_binder' binder x i;
       freevars_close_term' initializer x i;
       freevars_close_term' length x i;
       freevars_close_st_term' body x (i + 1)
@@ -220,9 +220,16 @@ let rec freevars_close_st_term' (t:st_term) (x:var) (i:index)
       match returns_inv with
       | None -> ()
       | Some (b, r, is) ->
-        freevars_close_term' b.binder_ty x i;
+        freevars_close_binder' b x i;
         freevars_close_term' r x (i + 1);
         freevars_close_term' is x i
+
+and freevars_close_binder' (t:binder) (x:var) (i:index)
+  : Lemma
+    (ensures (freevars_binder (close_binder' t x i) `Set.equal`
+             (freevars_binder t `set_minus` x)))
+  = admit()
+
 #pop-options
 
 let freevars_close_term (e:term) (x:var) (i:index)
@@ -418,9 +425,9 @@ let freevars_open_st_term_inv (e:st_term)
 #pop-options
 #pop-options
 
-let freevars_tm_arrow (b:binder) (q:option qualifier) (c:comp)
-  : Lemma (freevars (tm_arrow b q c) ==
-           Set.union (freevars b.binder_ty)
+let freevars_tm_arrow (b:binder) (c:comp)
+  : Lemma (freevars (tm_arrow b c) ==
+           Set.union (freevars_binder b)
                      (freevars_comp c)) =
   admit ()
 

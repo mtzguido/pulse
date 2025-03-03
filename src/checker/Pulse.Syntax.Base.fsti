@@ -78,6 +78,7 @@ let as_fv l = { fv_name = l; fv_range = FStar.Range.range_0 }
 
 type term = R.term
 type binder = R.binder
+type simple_binder = R.simple_binder (* explicit, no attrs *)
 type slprop = term
 type typ = term
 
@@ -281,7 +282,7 @@ type st_term' =
   | Tm_WithInv {
       name : term; // invariant name is an F* term that is an Tm_fvar or Tm_name
       body : st_term;
-      returns_inv : option (binder & slprop & term);  // returns _:t ensures p opens is
+      returns_inv : option (simple_binder & slprop & term);  // returns _:t ensures p opens is
     }
 
 and st_term = {
@@ -412,8 +413,10 @@ let ppname_for_uvar (p : ppname) : T.Tac ppname =
   }
 
 let binder_sort (b:binder) : term     = (R.inspect_binder b).sort
+let binder_attrs (b:binder) : list term = (R.inspect_binder b).attrs
 let binder_qual (b:binder) : R.aqualv = (R.inspect_binder b).qual
 let binder_ppname (b:binder) : RT.pp_name_t = (R.inspect_binder b).ppname
+(* the one below returns a "pulse ppname", with a range. *)
 let binder_sppname (b:binder) : ppname =
   { 
     name = binder_ppname b;

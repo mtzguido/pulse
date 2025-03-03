@@ -30,10 +30,10 @@ open Pulse.Soundness.Common
 
 (* x:t1 -> stt t2 pre post   ~    x:t1 -> stt t2 ((fun x -> pre) x) post *)
 let mequiv_arrow (g:R.env) (t1:R.term) (u2:R.universe) (t2:R.term) (pre:R.term) (post:R.term) //need some ln preconditions
-  : GTot (RT.equiv g (mk_arrow (t1, R.Q_Explicit)
+  : GTot (RT.equiv g (mk_arrow0 t1
                                (mk_stt_comp u2 t2 pre post))
-                     (mk_arrow (t1, R.Q_Explicit)
-                               (mk_stt_comp u2 t2 (R.mk_app (mk_abs t1 R.Q_Explicit pre) [bound_var 0, R.Q_Explicit]) post)))
+                     (mk_arrow0 t1
+                               (mk_stt_comp u2 t2 (R.mk_app (mk_abs0 t1 pre) [bound_var 0, R.Q_Explicit]) post)))
   = admit()
 
 
@@ -121,7 +121,7 @@ let elab_bind_typing (g:stt_env)
                      (r1_typing: RT.tot_typing (elab_env g) r1 (elab_comp c1))
                      (r2:R.term)
                      (r2_typing: RT.tot_typing (elab_env g) r2 
-                                               (tm_arrow (null_binder (comp_res c1)) None (close_comp c2 x)))
+                                               (tm_arrow (null_binder (comp_res c1)) (close_comp c2 x)))
                      (bc:bind_comp g x c1 c2 c)
                      (t2_typing : RT.tot_typing (elab_env g) (comp_res c2) (RT.tm_type (comp_u c2)))
                      (post2_typing: RT.tot_typing (elab_env g) 
@@ -149,41 +149,42 @@ let elab_bind_typing (g:stt_env)
     assert (~ (x `Set.mem` freevars (comp_post c1)));
     close_open_inverse (comp_post c1) x;
     assert (comp_post c1 == close_term (comp_pre c2) x);
-    assert (post1 == mk_abs t1 R.Q_Explicit (comp_post c1));
+    assert (post1 == mk_abs0 t1 (comp_post c1));
     assert (comp_post c1 == comp_pre (close_comp c2 x));
     //ln (comp_post c1) 0
     let g_typing
-      : RT.tot_typing _ _ 
-                  (mk_arrow (t1, R.Q_Explicit)
+      : RT.tot_typing (elab_env g) r2
+                  (mk_arrow0 (comp_res c1)
                             (mk_stt_comp u2 t2 (comp_post c1) (elab_comp_post c2)))
        = r2_typing in
-    let g_typing 
-      : RT.tot_typing _ _ 
-                  (mk_arrow (t1, R.Q_Explicit)
-                            (mk_stt_comp u2 t2
-                                            (R.mk_app (mk_abs t1 R.Q_Explicit (comp_post c1))
-                                                     [bound_var 0, R.Q_Explicit])
-                                                (elab_comp_post c2)))
-      = RT.T_Sub _ _ _ _ r2_typing
-          (RT.Relc_typ _ _ _ _ _
-             (RT.Rel_equiv _ _ _ _ (mequiv_arrow _ _ _ _ _ _)))
-        in
-    let d : RT.tot_typing _ (elab_bind bc r1 r2) _ = 
-       inst_bind_g 
-        (inst_bind_f
-          (inst_bind_post2
-            (inst_bind_post1
-              (inst_bind_pre 
-                (inst_bind_t2 
-                  (inst_bind_t1 head_typing t1_typing)
-                  t2_typing)
-                pre_typing)
-              post_typing)
-            post2_typing)
-          r1_typing)
-        g_typing
-    in
-    d
+    magic()
+    // let g_typing 
+    //   : RT.tot_typing _ _ 
+    //               (mk_arrow0 t1
+    //                         (mk_stt_comp u2 t2
+    //                                         (R.mk_app (mk_abs0 t1 (comp_post c1))
+    //                                                  [bound_var 0, R.Q_Explicit])
+    //                                             (elab_comp_post c2)))
+    //   = RT.T_Sub _ _ _ _ r2_typing
+    //       (RT.Relc_typ _ _ _ _ _
+    //          (RT.Rel_equiv _ _ _ _ (mequiv_arrow _ _ _ _ _ _)))
+    //     in
+    // let d : RT.tot_typing _ (elab_bind bc r1 r2) _ = 
+    //    inst_bind_g 
+    //     (inst_bind_f
+    //       (inst_bind_post2
+    //         (inst_bind_post1
+    //           (inst_bind_pre 
+    //             (inst_bind_t2 
+    //               (inst_bind_t1 head_typing t1_typing)
+    //               t2_typing)
+    //             pre_typing)
+    //           post_typing)
+    //         post2_typing)
+    //       r1_typing)
+    //     g_typing
+    // in
+    // d
 #pop-options
 
 assume
