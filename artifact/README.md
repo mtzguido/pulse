@@ -5,10 +5,26 @@ can we fix them?
 
 The artifact includes:
 
-- The implementation of the PulseCore logic.
-- The implementation of the Pulse checker (not a contribution of the
-  paper).
-- The examples from the paper, in Pulse.
+1. The implementation of the PulseCore logic.
+2. The implementation of the Pulse checker (not a contribution of the
+   paper).
+3. The examples from the paper, in Pulse.
+
+We want to emphasize that the main contribution of the paper is the
+PulseCore logic (1) and showing that it is expressive enough to handle
+many interesting programs (3).
+
+The Pulse checker is a partially-verified certified type checker for
+Pulse and, as such, has some admitted proofs. The admitted proofs are
+mostly related to the difficulties of writing a certified type checker
+and some scalability limitations of the F* metaprogramming engine, and
+not at all to the separation logic itself. We include it in the interest
+of transparency, but remark that it's partial verification status should
+not be of interest to the reviewers.
+
+There are no admits in the PulseCore logic, nor in the presented
+examples. There are other admits in tests (intentional) and in some
+other examples.
 
 # Getting Started
 
@@ -52,12 +68,21 @@ and then extract the source package (`pulsecore-pldi2025-src.tar.gz`)
 
     $ tar xzf pulsecore-pldi2025.tar.gz
 
-This will create the pulsecore/ directory with the artifact
-contents. You can now open this directory in VS Code (or another
-devcontainer-capable editor) and tell it to use the devcontainer (see
-`.devcontainer/devcontainer.json` for its definition). VS Code will
-usually prompt you about it, but otherwise can be done via Ctrl-Shift-P
-and "Dev Containers: Rebuild and Reopen in Container".
+This will create the pulsecore/ directory with the artifact contents.
+You can now open this directory as a workspace in VS Code by:
+
+    $ code pulsecore/
+
+(or just using the GUI) and tell it to use the devcontainer. VS Code
+will usually prompt you about it, but otherwise can be done via
+Ctrl-Shift-P and "Dev Containers: Rebuild and Reopen in Container".
+
+The devcontainer also indicates VS Code to install the F* extension.
+See `.devcontainer/devcontainer.json` for the devcontainer definition.
+
+You can now build Pulse by opening a terminal in VS code and running:
+
+    $ make -j$(nproc)
 
 Once done, you should be able to open F* files in the artifact
 and immediately be able to verify them interactively. This link
@@ -96,8 +121,10 @@ karamel) are installed too.
     LICENSE           artifact               out         qs
     Makefile          build                  pulse.opam  share
 
-The pulsecore/ has a fully-built checkout of the PulseCore logic, the
-Pulse checker, and the examples in the paper (and more).
+F* and karamel are already built and installed, but Pulse is not built.
+To build it, go into the `pulsecore/` directory and run
+
+    $ make -j$(nproc)
 
 To verify a particular file, you can run `./pulse.sh -f
 path/to/file.fst` (`-f` makes sure F* does it, even if the respective

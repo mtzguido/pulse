@@ -70,6 +70,5 @@ RUN opam switch create 5.1.1
 RUN opam install --switch=5.1.1 -- dune domainslib
 RUN opam switch $OCAML_VERSION
 
-# Copy and build pulse
-COPY --chown=$USER pulsecore/ pulsecore/
-RUN . $HOME/.bash_profile && cd pulsecore/ && make -j$(nproc)
+# Copy pulse, don't build it.
+COPY --chown=$USER pulsecore/ /pulsecore
