@@ -303,7 +303,8 @@ fn rec append_left (#t:Type0) (x:tree_t t) (v:t) (#ft:G.erased (T.tree t))
 
       rewrite each left_new as ({ node with left = left_new }).left in (is_tree left_new ((T.append_left (reveal _ltree) v)));
       
-      rewrite each node.right as ({ node with left = left_new }).right in (is_tree node.right _rtree);
+      // ????
+      rewrite each node.right as ({ node with left = left_new }).right; // in (is_tree node.right _rtree);
 
       intro_is_tree_node x vl;
 
