@@ -572,8 +572,12 @@ let teq_nosmt_force_args (g: R.env) (x y: term) (fail_fast: bool) : Dv bool =
     if R.inspect_fv x = on_name && R.inspect_fv y = on_name
     then let xx_h, xx_as = R.collect_app_ln px in
          let yy_h, yy_as = R.collect_app_ln py in
-         go ((xh, R.Q_Explicit) :: lx :: (xx_h, R.Q_Explicit) :: xx_as)
-            ((yh, R.Q_Explicit) :: ly :: (yy_h, R.Q_Explicit) :: yy_as)
+         if T.term_eq xx_h yy_h && List.length xx_as = List.length yy_as
+         then (
+          go ((xh, R.Q_Explicit) :: lx :: (xx_h, R.Q_Explicit) :: xx_as)
+             ((yh, R.Q_Explicit) :: ly :: (yy_h, R.Q_Explicit) :: yy_as)
+         )
+         else fallback()
     else fallback ()
   )
   | _ -> 
